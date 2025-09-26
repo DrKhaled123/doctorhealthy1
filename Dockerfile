@@ -15,9 +15,7 @@ RUN go mod download
 # Copy source
 COPY . .
 
-ENV CGO_ENABLED=1 \
-    GOOS=linux \
-    GOARCH=amd64
+ENV CGO_ENABLED=1
 
 # Build
 RUN go build -ldflags="-s -w" -o server .
