@@ -29,8 +29,10 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Non-root user
-RUN useradd -m -u 10001 appuser
+# Non-root user and data directory setup
+RUN useradd -m -u 10001 appuser && \
+    mkdir -p /data && \
+    chown -R appuser:appuser /data
 
 COPY --from=builder /app/server /app/server
 
