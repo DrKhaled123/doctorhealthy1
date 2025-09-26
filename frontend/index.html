@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DoctorHealthy1</title>
+  <link rel="stylesheet" href="/frontend/css/styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="topbar">
+    <div class="container">
+      <div class="brand">DoctorHealthy1</div>
+      <nav class="nav">
+        <a href="/frontend/index.html" data-i18n="home">Home</a>
+        <a href="/frontend/diet.html" data-i18n="diet">Diet & Meals</a>
+        <a href="/frontend/workouts.html" data-i18n="workouts">Workouts</a>
+        <a href="/frontend/lifestyle.html" data-i18n="lifestyle">Lifestyle</a>
+        <a href="/frontend/recipes.html" data-i18n="recipes">Recipes</a>
+        <a href="/frontend/pricing.html">Pricing</a>
+      </nav>
+      <div class="actions">
+        <span id="planBadge" class="badge" title="Your current plan">Free</span>
+        <button id="langToggle" class="btn btn-secondary">العربية</button>
+        <a class="btn btn-primary" target="_blank" rel="noopener" href="https://docs.google.com/forms/d/e/1FAIpQLSfOGYKJt1BxIUWBpO8HsoRAK9afPy1aAYc-OFI7-s_c34es7A/viewform?usp=dialog" data-i18n="becomePro">Become Pro</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container hero">
+    <h1 data-i18n="heroTitle">Your Personalized Health Companion</h1>
+    <p class="subtitle" data-i18n="heroSubtitle">Evidence-based plans for nutrition, workouts, lifestyle and recipes.</p>
+
+    <section class="grid">
+      <a class="card" href="/frontend/diet.html">
+        <div class="card-icon">🍎</div>
+        <h2 data-i18n="diet">Diet & Meals</h2>
+        <p data-i18n="dietDesc">Weekly personalized plans with ingredients, methods, and nutrition.</p>
+      </a>
+      <a class="card" href="/frontend/workouts.html">
+        <div class="card-icon">💪</div>
+        <h2 data-i18n="workouts">Workouts</h2>
+        <p data-i18n="workoutsDesc">Smart routines, injury guidance, sets/reps, warmups, and supplements.</p>
+      </a>
+      <a class="card" href="/frontend/lifestyle.html">
+        <div class="card-icon">🩺</div>
+        <h2 data-i18n="lifestyle">Lifestyle</h2>
+        <p data-i18n="lifestyleDesc">Condition-based guidance, nutrition, habits, and treatment suggestions.</p>
+      </a>
+      <a class="card" href="/frontend/recipes.html">
+        <div class="card-icon">🍽️</div>
+        <h2 data-i18n="recipes">Recipes</h2>
+        <p data-i18n="recipesDesc">Cuisine preferences, dislikes, tips and alternatives. Free plan: 3 gens.</p>
+      </a>
+    </section>
+
+    <section class="cta">
+      <h3 data-i18n="ctaTitle">Take the Pro account and be a special member</h3>
+      <a class="btn btn-accent" target="_blank" rel="noopener" href="https://docs.google.com/forms/d/e/1FAIpQLSfOGYKJt1BxIUWBpO8HsoRAK9afPy1aAYc-OFI7-s_c34es7A/viewform?usp=dialog" data-i18n="ctaButton">Subscribe now</a>
+    </section>
+
+    <section class="info">
+      <h3 data-i18n="quotesTitle">Real quotes about healthy living</h3>
+      <ul class="quotes">
+        <li>“Let food be thy medicine and medicine be thy food.” — Hippocrates</li>
+        <li>“A fit body, a calm mind, a house full of love.” — Naval Ravikant</li>
+        <li>“Health is the greatest gift.” — Buddha</li>
+      </ul>
+
+      <h3 data-i18n="storiesTitle">Real stories of commitment</h3>
+      <p data-i18n="storiesBody">People who consistently follow simple, evidence-based routines often report better energy, weight balance, and mood. Your journey can start today.</p>
+
+      <h3 data-i18n="contactTitle">Contact</h3>
+      <p>
+        <strong data-i18n="phone">Phone</strong>: +201070279113 / +201024056330<br />
+        <strong data-i18n="businessEmail">Business</strong>: 111@doctorhealthy.com<br />
+        <strong data-i18n="personalEmail">Personal</strong>: doctorhealthy111@gmail.com
+      </p>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <span>© <span id="year"></span> DoctorHealthy1</span>
+    </div>
+  </footer>
+
+  <script src="/frontend/js/app.js"></script>
+</body>
+</html>
+
+

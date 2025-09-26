@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Workouts - DoctorHealthy1</title>
+  <link rel="stylesheet" href="/frontend/css/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="container">
+      <div class="brand">DoctorHealthy1</div>
+      <nav class="nav">
+        <a href="/frontend/index.html">Home</a>
+        <a href="/frontend/diet.html">Diet</a>
+        <a href="/frontend/workouts.html">Workouts</a>
+        <a href="/frontend/lifestyle.html">Lifestyle</a>
+        <a href="/frontend/recipes.html">Recipes</a>
+      </nav>
+      <div class="actions">
+        <span id="planBadge" class="badge" title="Your current plan">Free</span>
+        <button id="langToggle" class="btn btn-secondary">العربية</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container hero">
+    <h1>Workouts</h1>
+    <p class="subtitle">Weekly workouts with sets, reps, rest, warmups, and injury guidance.</p>
+
+    <section class="card">
+      <form id="workoutForm">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">
+          <label>Goal<select name="goal"><option value="general_fitness">General fitness</option><option value="muscle_gain">Muscle gain</option><option value="weight_loss">Weight loss</option><option value="strength">Strength</option></select></label>
+          <label>Level<select name="level"><option value="beginner">Beginner</option><option value="intermediate">Intermediate</option><option value="advanced">Advanced</option></select></label>
+          <label>Sessions/week<input type="number" name="sessions" min="2" max="7" value="3" /></label>
+          <label>Language<select name="language"><option value="en">English</option><option value="ar">العربية</option></select></label>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:10px;align-items:center;">
+          <input type="text" id="apiKey" placeholder="X-API-Key (required)" style="flex:1;">
+          <button class="btn btn-primary" type="submit">Generate</button>
+          <button class="btn btn-accent" id="downloadPdf" type="button" disabled>Download PDF</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="info" id="result" hidden>
+      <h3>Result</h3>
+      <pre id="resultPre" style="white-space:pre-wrap;background:#fff;padding:12px;border-radius:8px;"></pre>
+    </section>
+  </main>
+
+  <footer class="footer"><div class="container">© <span id="year"></span> DoctorHealthy1</div></footer>
+
+  <script src="/frontend/js/app.js"></script>
+  <script src="/frontend/js/pages.js"></script>
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      setupWorkoutPage({
+        generateUrl: '/api/v1/enhanced/workout-plan/generate',
+        pdfUrl: '/api/v1/enhanced/workout-plan/pdf'
+      });
+    });
+  </script>
+</body>
+</html>
+
+

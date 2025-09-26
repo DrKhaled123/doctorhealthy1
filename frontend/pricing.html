@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pricing - DoctorHealthy1</title>
+  <link rel="stylesheet" href="/frontend/css/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="container">
+      <div class="brand">DoctorHealthy1</div>
+      <nav class="nav">
+        <a href="/frontend/index.html">Home</a>
+        <a href="/frontend/diet.html">Diet</a>
+        <a href="/frontend/workouts.html">Workouts</a>
+        <a href="/frontend/lifestyle.html">Lifestyle</a>
+        <a href="/frontend/recipes.html">Recipes</a>
+        <a href="/frontend/pricing.html">Pricing</a>
+      </nav>
+      <div class="actions">
+        <button id="langToggle" class="btn btn-secondary">العربية</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container hero">
+    <h1>Pricing</h1>
+    <p class="subtitle">Choose your plan. Currency is shown by your selected country.</p>
+
+    <section class="card" style="margin-bottom:16px;">
+      <label>Country
+        <select id="country" style="margin-left:8px;">
+          <option value="US">United States (USD)</option>
+          <option value="EG">Egypt (EGP)</option>
+          <option value="EU">Eurozone (EUR)</option>
+          <option value="SA">Saudi Arabia (SAR)</option>
+          <option value="AE">United Arab Emirates (AED)</option>
+          <option value="GB">United Kingdom (GBP)</option>
+        </select>
+      </label>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <h2>Free Plan</h2>
+        <p>🌟 Perfect for getting started</p>
+        <ul style="text-align: left; padding-left: 20px; margin: 16px 0;">
+          <li>3 PDF downloads / month</li>
+          <li>11 PDF downloads if you share</li>
+          <li>Basic health reports</li>
+          <li>Recipe suggestions</li>
+          <li>Simple workout plans</li>
+        </ul>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="selectPlan('free')">Choose Free</button>
+          <button class="btn btn-accent" id="setShared">🎁 I Shared</button>
+        </div>
+      </div>
+
+      <div class="card" style="border: 2px solid var(--primary);">
+        <div class="badge" style="position: absolute; top: -10px; right: 20px;">Most Popular</div>
+        <h2>Pro Plan</h2>
+        <p>💪 For serious health enthusiasts</p>
+        <ul style="text-align: left; padding-left: 20px; margin: 16px 0;">
+          <li>50 PDF downloads / month</li>
+          <li>Advanced health analytics</li>
+          <li>Custom workout plans</li>
+          <li>Multi-cuisine recipes</li>
+          <li>Progress tracking</li>
+          <li>Priority support</li>
+        </ul>
+        <div><strong id="proPrice">$5</strong> / month &nbsp;|&nbsp; <strong id="annualPrice">$55</strong> / year</div>
+        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="selectPlan('pro')">Choose Pro</button>
+          <button class="btn btn-accent" onclick="shareAndUnlock('pro')">🎁 I Shared</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Premium Plan</h2>
+        <p>🚀 Ultimate health transformation</p>
+        <ul style="text-align: left; padding-left: 20px; margin: 16px 0;">
+          <li>Unlimited PDF downloads</li>
+          <li>AI-powered insights</li>
+          <li>VIP workout programs</li>
+          <li>Personalized nutrition coaching</li>
+          <li>Advanced supplement plans</li>
+          <li>24/7 priority support</li>
+        </ul>
+        <div><strong id="lifetimePrice">$111</strong> one-time</div>
+        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-accent" onclick="selectPlan('premium')">Choose Premium</button>
+          <button class="btn btn-accent" onclick="shareAndUnlock('premium')">🎁 I Shared</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- PDF Generation Section -->
+    <section class="card" style="margin-top: 32px;">
+      <h2>🔥 Generate Your Health Reports</h2>
+      <p>Create personalized PDF reports instantly. Usage tracked by cookies.</p>
+      
+      <div class="quota-status" style="margin: 16px 0; padding: 12px; background: #f8fafc; border-radius: 8px;">
+        <p><strong>📊 PDF Usage:</strong> <span id="pdfUsage">0</span> / <span id="pdfLimit">3</span> this month</p>
+        <div style="background: #e2e8f0; height: 8px; border-radius: 4px; margin-top: 8px;">
+          <div id="quotaBar" style="background: var(--primary); height: 100%; border-radius: 4px; width: 0%; transition: width 0.3s;"></div>
+        </div>
+      </div>
+
+      <div class="grid" style="margin-top: 16px;">
+        <button class="btn btn-primary" onclick="generatePDF('nutrition')" style="display: flex; align-items: center; gap: 8px;">
+          📊 <span>Nutrition Report</span>
+        </button>
+        <button class="btn btn-primary" onclick="generatePDF('workout')" style="display: flex; align-items: center; gap: 8px;">
+          💪 <span>Workout Plan</span>
+        </button>
+        <button class="btn btn-primary" onclick="generatePDF('health')" style="display: flex; align-items: center; gap: 8px;">
+          🩺 <span>Health Assessment</span>
+        </button>
+        <button class="btn btn-primary" onclick="generatePDF('recipes')" style="display: flex; align-items: center; gap: 8px;">
+          🍽️ <span>Recipe Collection</span>
+        </button>
+        <button class="btn btn-accent" onclick="generatePDF('complete')" style="display: flex; align-items: center; gap: 8px;">
+          📋 <span>Complete Report</span>
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer"><div class="container">© <span id="year"></span> DoctorHealthy1</div></footer>
+
+  <script src="/frontend/js/app.js"></script>
+  <script>
+    const countryEl = document.getElementById('country');
+    const proPrice = document.getElementById('proPrice');
+    const annualPrice = document.getElementById('annualPrice');
+    const lifetimePrice = document.getElementById('lifetimePrice');
+
+    function formatPrices(country) {
+      const rates = {
+        US: { m: '$5', y: '$55', l: '$111' },
+        EG: { m: 'EGP 155', y: 'EGP 1695', l: 'EGP 3390' },
+        EU: { m: '€5', y: '€55', l: '€111' },
+        SA: { m: 'SAR 19', y: 'SAR 209', l: 'SAR 419' },
+        AE: { m: 'AED 19', y: 'AED 209', l: 'AED 419' },
+        GB: { m: '£4', y: '£45', l: '£90' }
+      };
+      const r = rates[country] || rates.US;
+      proPrice.textContent = r.m;
+      annualPrice.textContent = r.y;
+      lifetimePrice.textContent = r.l;
+    }
+    countryEl.addEventListener('change', (e) => formatPrices(e.target.value));
+    formatPrices(countryEl.value);
+
+    // Cookie helpers
+    function setCookie(name, value, days) {
+      const expires = new Date(Date.now() + days*24*60*60*1000).toUTCString();
+      document.cookie = `${name}=${value}; Path=/; Expires=${expires}`;
+    }
+
+    function getCookie(name) {
+      const cookies = document.cookie.split(';');
+      for (let cookie of cookies) {
+        const [key, value] = cookie.trim().split('=');
+        if (key === name) return value;
+      }
+      return null;
+    }
+
+    // Plan selection functions
+    function selectPlan(planType) {
+      setCookie('plan', planType, 30);
+      alert(`🎉 ${planType.charAt(0).toUpperCase() + planType.slice(1)} plan selected! Your plan is now active.`);
+      updateQuotaDisplay();
+    }
+
+    function shareAndUnlock(planType) {
+      // Open share modal or redirect to social media
+      const shareText = `Check out DoctorHealthy1 - the ultimate health and nutrition platform! Get personalized meal plans, workouts, and health insights. Join me at doctorhealthy1.com`;
+      const shareUrl = `https://doctorhealthy1.com?ref=${planType}`;
+      
+      if (navigator.share) {
+        navigator.share({
+          title: 'DoctorHealthy1 - Health & Nutrition Platform',
+          text: shareText,
+          url: shareUrl
+        });
+      } else {
+        // Fallback to Twitter share
+        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`, '_blank');
+      }
+      
+      // Set shared status and unlock plan
+      setCookie('shared', 'yes', 365);
+      setCookie('plan', planType, 30);
+      alert(`🎁 Thanks for sharing! ${planType.charAt(0).toUpperCase() + planType.slice(1)} plan unlocked for free!`);
+      updateQuotaDisplay();
+    }
+
+    // PDF generation and quota management
+    async function generatePDF(type) {
+      // Show loading state
+      const button = event.target;
+      const icons = { nutrition: '📊', workout: '💪', health: '🩺', recipes: '🍽️', complete: '📋' };
+      const labels = { nutrition: 'Nutrition Report', workout: 'Workout Plan', health: 'Health Assessment', recipes: 'Recipe Collection', complete: 'Complete Report' };
+      
+      button.innerHTML = '⏳ Generating...';
+      button.disabled = true;
+
+      try {
+        // Call the API to generate PDF
+        const response = await fetch('/api/pdf/generate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            type: type,
+            format: 'pdf',
+            options: {}
+          })
+        });
+
+        if (response.ok) {
+          // Check if it's a PDF or error response
+          const contentType = response.headers.get('content-type');
+          
+          if (contentType && contentType.includes('text/plain')) {
+            // It's a PDF file, download it
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `doctorhealthy1-${type}-report.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            // Update quota display
+            updateQuotaDisplay();
+            alert(`✅ ${labels[type]} generated successfully!`);
+          } else {
+            // It's an error response
+            const errorData = await response.json();
+            alert(`❌ ${errorData.message}`);
+          }
+        } else {
+          // Handle HTTP errors
+          if (response.status === 429) {
+            const errorData = await response.json();
+            alert(`❌ ${errorData.message}`);
+          } else {
+            alert(`❌ Failed to generate PDF. Please try again.`);
+          }
+        }
+      } catch (error) {
+        console.error('PDF generation error:', error);
+        alert('❌ Network error. Please check your connection and try again.');
+      } finally {
+        // Reset button
+        button.innerHTML = `${icons[type]} <span>${labels[type]}</span>`;
+        button.disabled = false;
+      }
+    }
+
+    function generatePDFContent(type) {
+      const templates = {
+        nutrition: `# Nutrition Report - DoctorHealthy1\n\n## Your Personalized Nutrition Plan\n\nBased on your profile and goals, here's your customized nutrition guide:\n\n### Daily Caloric Needs: 2200 calories\n\n### Macronutrient Breakdown:\n- Proteins: 25% (550 cal, 137g)\n- Carbohydrates: 45% (990 cal, 247g) \n- Fats: 30% (660 cal, 73g)\n\n### Recommended Foods:\n- Lean proteins: Chicken, fish, legumes\n- Complex carbs: Quinoa, brown rice, sweet potatoes\n- Healthy fats: Avocados, nuts, olive oil\n\n### Meal Timing:\n- Breakfast: 7-8 AM (400 cal)\n- Lunch: 12-1 PM (600 cal)\n- Dinner: 6-7 PM (500 cal)\n- Snacks: 2 x 250 cal\n\nGenerated by DoctorHealthy1 AI System`,
+        
+        workout: `# Workout Plan - DoctorHealthy1\n\n## Your Personalized 4-Week Program\n\n### Week 1-2: Foundation Building\n**Monday - Upper Body:**\n- Push-ups: 3 sets x 10 reps\n- Pull-ups: 3 sets x 5 reps\n- Plank: 3 sets x 30 seconds\n\n**Wednesday - Lower Body:**\n- Squats: 3 sets x 15 reps\n- Lunges: 3 sets x 10 each leg\n- Glute bridges: 3 sets x 12 reps\n\n**Friday - Full Body:**\n- Burpees: 3 sets x 5 reps\n- Mountain climbers: 3 sets x 20 reps\n- Jumping jacks: 3 sets x 30 seconds\n\n### Week 3-4: Strength Building\n**Monday - Upper Body:**\n- Push-ups: 4 sets x 12 reps\n- Pull-ups: 4 sets x 6 reps\n- Plank: 4 sets x 45 seconds\n\nGenerated by DoctorHealthy1 AI System`,
+        
+        health: `# Health Assessment - DoctorHealthy1\n\n## Comprehensive Health Analysis\n\n### Overall Health Score: 85/100\n\n### Key Metrics:\n- BMI: 23.5 (Normal)\n- Body Fat: 15% (Excellent)\n- Muscle Mass: 42% (Good)\n- Hydration: 65% (Adequate)\n\n### Health Recommendations:\n1. **Cardiovascular:** Continue current cardio routine\n2. **Strength:** Increase resistance training\n3. **Flexibility:** Add 15 min daily stretching\n4. **Sleep:** Maintain 7-8 hours nightly\n5. **Stress:** Practice meditation 10 min/day\n\n### Risk Factors:\n- Low: Heart disease, diabetes\n- Medium: Stress-related issues\n- Action needed: Improve posture\n\n### Next Steps:\n- Schedule follow-up in 4 weeks\n- Track daily metrics\n- Implement recommendations\n\nGenerated by DoctorHealthy1 AI System`,
+        
+        recipes: `# Recipe Collection - DoctorHealthy1\n\n## Your Personalized Recipe Book\n\n### Breakfast Recipes\n\n**Protein Power Bowl**\n- 2 eggs, scrambled\n- 1/2 avocado, sliced\n- 1 cup spinach\n- 1/4 cup quinoa\n- Calories: 420\n\n**Green Smoothie**\n- 1 banana\n- 1 cup spinach\n- 1/2 cup almond milk\n- 1 tbsp almond butter\n- Calories: 280\n\n### Lunch Recipes\n\n**Mediterranean Bowl**\n- 4 oz grilled chicken\n- 1/2 cup quinoa\n- Mixed vegetables\n- 2 tbsp hummus\n- Calories: 520\n\n### Dinner Recipes\n\n**Salmon & Vegetables**\n- 5 oz baked salmon\n- Roasted broccoli\n- Sweet potato\n- Olive oil drizzle\n- Calories: 580\n\nGenerated by DoctorHealthy1 AI System`,
+        
+        complete: `# Complete Health Report - DoctorHealthy1\n\n## Your Comprehensive Wellness Profile\n\n### Personal Information\n- Generated: ${new Date().toLocaleDateString()}\n- Plan: ${getCookie('plan') || 'Free'}\n- Status: Active\n\n### Health Score: 85/100\n\n### Nutrition Analysis\n- Daily Calories: 2200\n- Protein: 137g (25%)\n- Carbs: 247g (45%)\n- Fats: 73g (30%)\n\n### Fitness Level\n- Current: Intermediate\n- Goal: Advanced\n- Weekly Activities: 4-5 sessions\n\n### Progress Tracking\n- Weight: Target reached\n- Strength: Improving\n- Endurance: Good\n- Flexibility: Needs work\n\n### Recommendations\n1. Continue current nutrition plan\n2. Increase strength training\n3. Add flexibility work\n4. Monitor sleep quality\n5. Track daily water intake\n\n### Next Review: ${new Date(Date.now() + 30*24*60*60*1000).toLocaleDateString()}\n\nGenerated by DoctorHealthy1 AI System`
+      };
+      
+      return templates[type] || templates.complete;
+    }
+
+    function downloadPDF(content, filename) {
+      // Create a simple text file (in production, you'd generate actual PDF)
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    }
+
+    async function updateQuotaDisplay() {
+      try {
+        // Fetch current quota from API
+        const response = await fetch('/api/pdf/quota');
+        if (response.ok) {
+          const data = await response.json();
+          
+          document.getElementById('pdfUsage').textContent = data.usage;
+          document.getElementById('pdfLimit').textContent = data.limit === 999999 ? '∞' : data.limit;
+          
+          const percentage = data.limit === 999999 ? 0 : (data.usage / data.limit) * 100;
+          document.getElementById('quotaBar').style.width = Math.min(percentage, 100) + '%';
+          
+          if (percentage >= 100) {
+            document.getElementById('quotaBar').style.background = '#ef4444';
+          } else if (percentage >= 80) {
+            document.getElementById('quotaBar').style.background = '#f59e0b';  
+          } else {
+            document.getElementById('quotaBar').style.background = 'var(--primary)';
+          }
+        } else {
+          // Fallback to cookie-based display
+          const usage = parseInt(getCookie('pdfUsage') || '0');
+          const plan = getCookie('plan') || 'free';
+          const shared = getCookie('shared') === 'yes';
+          
+          let limit = 3;
+          if (shared && plan === 'free') limit = 11;
+          else if (plan === 'pro') limit = 50;
+          else if (plan === 'premium') limit = 999;
+
+          document.getElementById('pdfUsage').textContent = usage;
+          document.getElementById('pdfLimit').textContent = limit === 999 ? '∞' : limit;
+          
+          const percentage = limit === 999 ? 0 : (usage / limit) * 100;
+          document.getElementById('quotaBar').style.width = Math.min(percentage, 100) + '%';
+          
+          if (percentage >= 100) {
+            document.getElementById('quotaBar').style.background = '#ef4444';
+          } else if (percentage >= 80) {
+            document.getElementById('quotaBar').style.background = '#f59e0b';  
+          } else {
+            document.getElementById('quotaBar').style.background = 'var(--primary)';
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch quota status:', error);
+        // Fall back to cookie-based display if API fails
+        const usage = parseInt(getCookie('pdfUsage') || '0');
+        document.getElementById('pdfUsage').textContent = usage;
+        document.getElementById('pdfLimit').textContent = '3';
+      }
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      updateQuotaDisplay();
+      
+      // Set up shared button
+      document.getElementById('setShared').onclick = function() {
+        setCookie('shared', 'yes', 365);
+        alert('🎁 Shared status activated! You now get 11 PDF downloads per month on the free plan.');
+        updateQuotaDisplay();
+      };
+    });
+
+    // Update year in footer
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
+
+

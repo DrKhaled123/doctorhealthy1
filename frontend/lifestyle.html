@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lifestyle - DoctorHealthy1</title>
+  <link rel="stylesheet" href="/frontend/css/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="container">
+      <div class="brand">DoctorHealthy1</div>
+      <nav class="nav">
+        <a href="/frontend/index.html">Home</a>
+        <a href="/frontend/diet.html">Diet</a>
+        <a href="/frontend/workouts.html">Workouts</a>
+        <a href="/frontend/lifestyle.html">Lifestyle</a>
+        <a href="/frontend/recipes.html">Recipes</a>
+      </nav>
+      <div class="actions">
+        <span id="planBadge" class="badge" title="Your current plan">Free</span>
+        <button id="langToggle" class="btn btn-secondary">العربية</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container hero">
+    <h1>Lifestyle: Diseases & Habits</h1>
+    <p class="subtitle">Guidance for conditions, symptoms, nutrition, and habits with treatment suggestions.</p>
+
+    <section class="card">
+      <form id="lifestyleForm">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">
+          <label>Disease/Condition<input type="text" name="condition" placeholder="e.g., diabetes" required /></label>
+          <label>Symptoms<textarea name="symptoms" rows="2" placeholder="comma-separated"></textarea></label>
+          <label>Language<select name="language"><option value="en">English</option><option value="ar">العربية</option></select></label>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:10px;align-items:center;">
+          <input type="text" id="apiKey" placeholder="X-API-Key (required)" style="flex:1;">
+          <button class="btn btn-primary" type="submit">Generate</button>
+          <button class="btn btn-accent" id="downloadPdf" type="button" disabled>Download PDF</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="info" id="result" hidden>
+      <h3>Result</h3>
+      <pre id="resultPre" style="white-space:pre-wrap;background:#fff;padding:12px;border-radius:8px;"></pre>
+    </section>
+  </main>
+
+  <footer class="footer"><div class="container">© <span id="year"></span> DoctorHealthy1</div></footer>
+
+  <script src="/frontend/js/app.js"></script>
+  <script src="/frontend/js/pages.js"></script>
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      setupLifestylePage({
+        generateUrl: '/api/v1/enhanced/lifestyle-plan/generate',
+        pdfUrl: '/api/v1/enhanced/lifestyle-plan/pdf'
+      });
+    });
+  </script>
+</body>
+</html>
+
+

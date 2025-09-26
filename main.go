@@ -2,10 +2,15 @@ package main
 
 import (
 	"context"
+	"embed"
+	"io"
 	"log"
+	"mime"
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -20,6 +25,11 @@ import (
 	"github.com/labstack/echo/v4"
 	echomiddleware "github.com/labstack/echo/v4/middleware"
 )
+
+// Embed frontend at build time for resilient serving
+//
+//go:embed frontend/*
+var embeddedFrontend embed.FS
 
 func main() {
 	// Load environment variables
@@ -76,6 +86,8 @@ func main() {
 	e.Use(middleware.RateLimit(cfg))
 	// Optional JWT (sets user_id when Authorization: Bearer is present)
 	e.Use(middleware.OptionalJWT())
+	// Enforce per-user monthly quotas on generate endpoints (free/pro/lifetime)
+	e.Use(middleware.UserQuotaMiddleware())
 
 	// Centralized error handler
 	middleware.SetupErrorHandler(e)
@@ -136,6 +148,29 @@ func main() {
 
 	// Enhanced Health System routes
 	handlers.RegisterEnhancedHealthRoutes(e, enhancedService, apiKeyService)
+
+	// PDF generation routes with quota management
+	handlers.SetupPDFRoutes(e)
+
+	// Static frontend serving with dual-source fallback (disk first, then embedded)
+	// Serve root index
+	e.GET("/", func(c echo.Context) error {
+		return serveStaticFile(c, "index.html", embeddedFrontend)
+	})
+
+	// Serve assets under /frontend/*
+	e.GET("/frontend/*", func(c echo.Context) error {
+		path := strings.TrimPrefix(c.Request().URL.Path, "/frontend/")
+		if path == "" || strings.HasSuffix(c.Request().URL.Path, "/") {
+			path += "index.html"
+		}
+		return serveStaticFile(c, path, embeddedFrontend)
+	})
+
+	// Catch-all fallback to index for SPA-like navigation
+	e.GET("/*", func(c echo.Context) error {
+		return serveStaticFile(c, "index.html", embeddedFrontend)
+	})
 
 	// Check if port is available
 	log.Printf("DEBUG: Attempting to start server on port %s", cfg.Server.Port)
@@ -205,4 +240,34 @@ type CustomValidator struct {
 // Validate validates the struct
 func (cv *CustomValidator) Validate(i interface{}) error {
 	return cv.validator.Struct(i)
+}
+
+// serveStaticFile serves a file from disk if present under ./frontend, otherwise from the embedded FS.
+func serveStaticFile(c echo.Context, relPath string, embedded embed.FS) error {
+	// Prefer on-disk to allow hot updates in deployments mounting /frontend
+	diskPath := filepath.Join("frontend", relPath)
+	if f, err := os.Open(diskPath); err == nil {
+		defer func() { _ = f.Close() }()
+		// Determine content type
+		ext := filepath.Ext(relPath)
+		ct := mime.TypeByExtension(ext)
+		if ct == "" {
+			ct = "text/plain; charset=utf-8"
+		}
+		c.Response().Header().Set(echo.HeaderContentType, ct)
+		_, _ = io.Copy(c.Response(), f)
+		return nil
+	}
+
+	// Fallback to embedded
+	data, err := embedded.ReadFile(filepath.ToSlash(filepath.Join("frontend", relPath)))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusNotFound, "asset not found")
+	}
+	ext := filepath.Ext(relPath)
+	ct := mime.TypeByExtension(ext)
+	if ct == "" {
+		ct = "text/plain; charset=utf-8"
+	}
+	return c.Blob(http.StatusOK, ct, data)
 }
