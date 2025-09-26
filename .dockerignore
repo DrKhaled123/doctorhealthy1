@@ -1,0 +1,15 @@
+node_modules
+vendor
+.git
+.gitignore
+.DS_Store
+*.log
+bin
+dist
+build
+*.sqlite
+*.db
+*.sqlite3
+**/tmp
+**/.cache
+

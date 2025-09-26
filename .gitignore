@@ -1,0 +1,20 @@
+# Binary executables
+api-key-generator
+health-api
+bin/
+main
+
+# Node modules
+node_modules/
+
+# Large data files
+vip json/
+vip-*.js
+
+# Build artifacts
+*.db
+*.log
+
+# IDE
+.vscode/
+.idea/
