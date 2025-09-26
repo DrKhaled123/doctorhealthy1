@@ -24,7 +24,7 @@ RUN go build -ldflags="-s -w" -o server .
 FROM debian:bookworm-slim AS runtime
 
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
-    ca-certificates tzdata && \
+    ca-certificates curl tzdata && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
