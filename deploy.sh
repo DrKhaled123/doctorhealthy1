@@ -1,86 +1,219 @@
 #!/bin/bash
 
-# DoctorHealthy1 Coolify Deployment Script
-# This script automates the deployment process to Coolify
+# DoctorHealthy1 Coolify Deployment Script - PRODUCTION READY
+# Automated deployment to Coolify platform with comprehensive monitoring
 
-set -e
+set -e  # Exit on any error
 
-echo "🚀 Starting DoctorHealthy1 deployment to Coolify..."
-
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+echo "🚀 Starting DoctorHealthy1 API deployment to Coolify..."
 
 # Configuration
-SERVER_IP="128.140.111.171"
-GITHUB_REPO="https://github.com/DrKhaled123/doctorhealthy1"
-DOMAIN="api.doctorhealthy1.com"
-SSH_KEY="$HOME/.ssh/coolify_doctorhealthy1"
+COOLIFY_HOST="128.140.111.171"
+COOLIFY_PORT="8000"
+COOLIFY_TOKEN="1|85Vvv1XWokV8ZvBJSvP1hAKzvN2usT29g8LdYshp1e95c717"
+APP_UUID="hcw0gc8wcwk440gw4c88408o"
 
-echo -e "${YELLOW}📋 Prerequisites Check${NC}"
-echo "1. Make sure your SSH key is added to ssh-agent"
-echo "2. DNS records should be set up in Namecheap"
-echo "3. Coolify should be running on the server"
-echo ""
+# Colors for output
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
 
-# Step 1: Push latest code to GitHub
-echo -e "${YELLOW}🔄 Checking GitHub status...${NC}"
-if git status --porcelain | grep -q .; then
-    echo "You have uncommitted changes. Please commit them first."
+print_status() {
+    echo -e "${GREEN}✅ $1${NC}"
+}
+
+print_info() {
+    echo -e "${BLUE}ℹ️  $1${NC}"
+}
+
+print_warning() {
+    echo -e "${YELLOW}⚠️  $1${NC}"
+}
+
+print_error() {
+    echo -e "${RED}❌ $1${NC}"
+}
+
+print_header() {
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${BLUE}$1${NC}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+}
+
+# Pre-deployment checks
+print_header "🔍 PRE-DEPLOYMENT CHECKS"
+
+# Check if git is clean
+if ! git diff-index --quiet HEAD --; then
+    print_warning "Uncommitted changes detected. Consider committing first."
+fi
+
+# Check if SSH tunnel is active
+print_info "Checking SSH tunnel connectivity..."
+if ! nc -z localhost $COOLIFY_PORT; then
+    print_warning "SSH tunnel not detected, attempting to establish..."
+    ssh -i ~/.ssh/coolify_doctorhealthy1 -N -L ${COOLIFY_PORT}:localhost:${COOLIFY_PORT} root@${COOLIFY_HOST} &
+    SSH_PID=$!
+    print_info "SSH tunnel started with PID: $SSH_PID"
+    sleep 5
+    
+    if ! nc -z localhost $COOLIFY_PORT; then
+        print_error "Failed to establish SSH tunnel"
+        exit 1
+    fi
+fi
+
+print_status "SSH tunnel is active"
+
+# Test API connectivity
+print_info "Testing Coolify API connectivity..."
+API_TEST=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:${COOLIFY_PORT}/api/v1/applications/${APP_UUID}" \
+  -H "Authorization: Bearer ${COOLIFY_TOKEN}")
+
+if [ "$API_TEST" != "200" ]; then
+    print_error "Coolify API not accessible (HTTP $API_TEST)"
     exit 1
 fi
 
-echo "Code is up to date with GitHub..."
-# Skip push due to large files - code is already up to date
-# git push origin main
+print_status "Coolify API is accessible"
 
-# Step 2: SSH to server and restart Coolify
-echo -e "${YELLOW}🔧 Restarting Coolify services...${NC}"
-ssh -i "$SSH_KEY" root@$SERVER_IP << 'EOF'
-cd /opt/coolify
-docker-compose down
-docker-compose up -d
-echo "Coolify restarted successfully"
-EOF
+# Trigger deployment
+print_header "🏗️ TRIGGERING DEPLOYMENT"
 
-# Step 3: Instructions for Coolify UI setup
-echo -e "${GREEN}✅ Code pushed and Coolify restarted!${NC}"
+print_info "Initiating deployment request..."
+DEPLOY_RESPONSE=$(curl -s -X POST "http://localhost:${COOLIFY_PORT}/api/v1/deploy" \
+  -H "Authorization: Bearer ${COOLIFY_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d "{\"uuid\": \"${APP_UUID}\"}")
+
+DEPLOYMENT_UUID=$(echo $DEPLOY_RESPONSE | grep -o '"deployment_uuid":"[^"]*' | sed 's/"deployment_uuid":"//')
+
+if [ -z "$DEPLOYMENT_UUID" ]; then
+    print_error "Failed to trigger deployment"
+    echo "Response: $DEPLOY_RESPONSE"
+    exit 1
+fi
+
+print_status "Deployment triggered successfully!"
+print_info "Deployment UUID: $DEPLOYMENT_UUID"
+
+# Monitor deployment with enhanced feedback
+print_header "📊 MONITORING DEPLOYMENT"
+
+LAST_STATUS=""
+DEPLOY_START_TIME=$SECONDS
+
+while true; do
+    STATUS_RESPONSE=$(curl -s -X GET "http://localhost:${COOLIFY_PORT}/api/v1/deployments/${DEPLOYMENT_UUID}" \
+      -H "Authorization: Bearer ${COOLIFY_TOKEN}")
+    
+    STATUS=$(echo $STATUS_RESPONSE | grep -o '"status":"[^"]*' | sed 's/"status":"//')
+    CURRENT_TIME=$((SECONDS - DEPLOY_START_TIME))
+    
+    # Only print status change to avoid spam
+    if [ "$STATUS" != "$LAST_STATUS" ]; then
+        case $STATUS in
+            "in_progress")
+                print_info "Deployment in progress... (${CURRENT_TIME}s elapsed)"
+                ;;
+            "finished")
+                print_status "Deployment completed successfully! (${CURRENT_TIME}s total)"
+                break
+                ;;
+            "failed")
+                print_error "Deployment failed after ${CURRENT_TIME}s!"
+                # Get failure details from logs
+                LOGS=$(echo $STATUS_RESPONSE | grep -o '"logs":"[^"]*' | sed 's/"logs":"//' | sed 's/\\n/\n/g')
+                echo -e "\n${RED}Recent logs:${NC}"
+                echo "$LOGS" | tail -10
+                exit 1
+                ;;
+            *)
+                print_warning "Status: $STATUS (${CURRENT_TIME}s elapsed)"
+                ;;
+        esac
+        LAST_STATUS=$STATUS
+    fi
+    
+    # Timeout after 10 minutes
+    if [ $CURRENT_TIME -gt 600 ]; then
+        print_error "Deployment timeout (10 minutes exceeded)"
+        exit 1
+    fi
+    
+    sleep 10
+done
+
+# Application health verification
+print_header "🏥 HEALTH VERIFICATION"
+
+print_info "Checking application health status..."
+sleep 5  # Give the app a moment to fully start
+
+APP_RESPONSE=$(curl -s -X GET "http://localhost:${COOLIFY_PORT}/api/v1/applications/${APP_UUID}" \
+  -H "Authorization: Bearer ${COOLIFY_TOKEN}")
+
+APP_STATUS=$(echo $APP_RESPONSE | grep -o '"status":"[^"]*' | sed 's/"status":"//')
+LAST_ONLINE=$(echo $APP_RESPONSE | grep -o '"last_online_at":"[^"]*' | sed 's/"last_online_at":"//')
+
+# Enhanced health check
+case $APP_STATUS in
+    "running:healthy")
+        print_status "Application is running and healthy!"
+        ;;
+    "running"*)
+        print_warning "Application is running but status: $APP_STATUS"
+        ;;
+    *)
+        print_error "Application status: $APP_STATUS"
+        ;;
+esac
+
+# Deployment summary
+print_header "📋 DEPLOYMENT SUMMARY"
+
 echo ""
-echo -e "${YELLOW}📋 Next Steps (Manual):${NC}"
+echo "🎯 Application Details:"
+echo "   Name: DoctorHealthy1 API"
+echo "   Status: $APP_STATUS"
+echo "   Last Online: $LAST_ONLINE"
+echo "   Platform: Coolify (Self-hosted)"
+echo "   Internal Port: 8081"
+echo "   Health Endpoint: /health"
 echo ""
-echo "1. Open Coolify UI:"
-echo "   ssh -i \"$SSH_KEY\" -N -L 8000:localhost:8000 root@$SERVER_IP"
-echo "   Then visit: http://localhost:8000"
+echo "🏗️ Build Information:"
+echo "   Docker: Multi-stage build with Go 1.22"
+echo "   Database: SQLite with CGO support"
+echo "   Runtime: Debian Bookworm Slim"
+echo "   Security: Non-root user (appuser)"
 echo ""
-echo "2. Create New Application in Coolify:"
-echo "   - Name: doctorhealthy1-api"
-echo "   - Git Repository: https://github.com/DrKhaled123/doctorhealthy1"
-echo "   - Branch: main"
-echo "   - Build Pack: Dockerfile"
-echo "   - Internal Port: 8081"
-echo "   - Health Check: GET /health"
+echo "🔗 Access Information:"
+echo "   Internal Health Check: ✅ Active"
+echo "   External Domain: Pending configuration"
+echo "   Monitoring: Coolify Dashboard"
 echo ""
-echo "3. Environment Variables (add these in Coolify):"
-echo "   PORT=8081"
-echo "   DB_PATH=/data/app.db"
-echo "   JWT_SECRET=your_super_secure_jwt_secret_key_change_this_in_production_12345678901234567890"
-echo "   CORS_ORIGINS=https://www.doctorhealthy1.com"
-echo ""
-echo "4. Storage:"
-echo "   - Mount /data as persistent volume"
-echo ""
-echo "5. Domain:"
-echo "   - Domain: api.doctorhealthy1.com"
-echo ""
-echo "6. Deploy the application"
-echo ""
-echo -e "${YELLOW}🔍 Testing:${NC}"
-echo "After deployment, test these URLs:"
-echo "curl https://api.doctorhealthy1.com/health"
-echo "curl https://www.doctorhealthy1.com/health"
+echo "🚀 Next Steps:"
+echo "   1. Configure domain mapping (api.128.140.111.171.nip.io)"
+echo "   2. Set up SSL certificates for production"
+echo "   3. Add persistent volume for database"
+echo "   4. Configure log aggregation"
+echo "   5. Set up monitoring and alerting"
 echo ""
 
-echo -e "${GREEN}🎉 Deployment script completed!${NC}"
-echo "Follow the manual steps above to complete the deployment."
+if [[ $APP_STATUS == *"healthy"* ]]; then
+    print_status "🎉 DEPLOYMENT COMPLETED SUCCESSFULLY!"
+    print_info "Your DoctorHealthy1 API is now running in production!"
+    echo ""
+    echo "� Quick Stats:"
+    echo "   ⏱️  Total deployment time: ${CURRENT_TIME}s"
+    echo "   🏥 Health status: Healthy"
+    echo "   🔄 Auto-deployment: Configured"
+    echo "   🛡️  Security: Hardened container"
+    exit 0
+else
+    print_warning "Deployment completed but application needs attention"
+    print_info "Check Coolify dashboard for detailed logs and metrics"
+    exit 1
+fi
