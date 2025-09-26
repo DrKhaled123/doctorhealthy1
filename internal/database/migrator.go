@@ -3,13 +3,15 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	"io"
 	"log"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
+
+	_ "embed"
 )
+
+//go:embed workout_schema.sql
+var workoutSchema string
 
 // RunMigrations applies idempotent SQL migrations. It never fatally exits; errors are logged and returned to caller.
 func RunMigrations(db *sql.DB) error {
@@ -72,19 +74,7 @@ func recordApplied(db *sql.DB, name string) error {
 }
 
 func applyWorkoutSchema(db *sql.DB) error {
-	schemaPath := filepath.Join("internal", "database", "workout_schema.sql") // nosec G304 - hardcoded path to internal schema file
-	f, err := os.Open(schemaPath)
-	if err != nil {
-		return fmt.Errorf("open schema: %w", err)
-	}
-	defer func() { _ = f.Close() }()
-
-	bytes, err := io.ReadAll(f)
-	if err != nil {
-		return fmt.Errorf("read schema: %w", err)
-	}
-
-	stmts := splitSQLStatements(string(bytes))
+	stmts := splitSQLStatements(workoutSchema)
 
 	// Phase 1: CREATE TABLE statements
 	if err := execFiltered(db, stmts, func(s string) bool {
@@ -218,17 +208,7 @@ func tableExistsTx(db *sql.DB, name string) bool {
 
 // applyWorkoutIndexesAndViews re-applies only indexes and views from the schema file.
 func applyWorkoutIndexesAndViews(db *sql.DB) error {
-	schemaPath := filepath.Join("internal", "database", "workout_schema.sql") // nosec G304 - hardcoded path to internal schema file
-	f, err := os.Open(schemaPath)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = f.Close() }()
-	bytes, err := io.ReadAll(f)
-	if err != nil {
-		return err
-	}
-	stmts := splitSQLStatements(string(bytes))
+	stmts := splitSQLStatements(workoutSchema)
 	// Only non-table statements
 	return execFiltered(db, stmts, func(s string) bool {
 		up := strings.ToUpper(strings.TrimSpace(s))

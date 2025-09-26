@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -20,17 +19,17 @@ func NewPDFHandler() *PDFHandler {
 
 // PDFRequest represents a PDF generation request
 type PDFRequest struct {
-	Type    string `json:"type" validate:"required,oneof=nutrition workout health recipes complete"`
-	Format  string `json:"format,omitempty"`
+	Type    string                 `json:"type" validate:"required,oneof=nutrition workout health recipes complete"`
+	Format  string                 `json:"format,omitempty"`
 	Options map[string]interface{} `json:"options,omitempty"`
 }
 
 // PDFResponse represents a PDF generation response
 type PDFResponse struct {
-	Success  bool   `json:"success"`
-	Message  string `json:"message"`
-	Usage    int    `json:"usage"`
-	Limit    int    `json:"limit"`
+	Success     bool   `json:"success"`
+	Message     string `json:"message"`
+	Usage       int    `json:"usage"`
+	Limit       int    `json:"limit"`
 	DownloadURL string `json:"download_url,omitempty"`
 }
 
@@ -72,12 +71,12 @@ func (h *PDFHandler) getCurrentUsage(c echo.Context) int {
 	if err != nil {
 		return 0
 	}
-	
+
 	usage, err := strconv.Atoi(usageCookie.Value)
 	if err != nil {
 		return 0
 	}
-	
+
 	return usage
 }
 
@@ -89,8 +88,8 @@ func (h *PDFHandler) updateUsage(c echo.Context, currentUsage int) {
 		Value:    strconv.Itoa(newUsage),
 		Path:     "/",
 		Expires:  time.Now().AddDate(0, 1, 0), // 1 month
-		HttpOnly: false, // Allow JavaScript access for quota display
-		Secure:   false, // Set to true in production with HTTPS
+		HttpOnly: false,                       // Allow JavaScript access for quota display
+		Secure:   false,                       // Set to true in production with HTTPS
 		SameSite: http.SameSiteLaxMode,
 	}
 	c.SetCookie(cookie)
@@ -142,10 +141,10 @@ func (h *PDFHandler) GeneratePDF(c echo.Context) error {
 
 	// Return PDF content as text (in production, this would be actual PDF bytes)
 	fileName := fmt.Sprintf("doctorhealthy1-%s-report-%s.txt", req.Type, time.Now().Format("2006-01-02"))
-	
+
 	c.Response().Header().Set("Content-Type", "text/plain")
 	c.Response().Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", fileName))
-	
+
 	return c.String(http.StatusOK, content)
 }
 
@@ -176,7 +175,7 @@ func (h *PDFHandler) GetQuotaStatus(c echo.Context) error {
 // generatePDFContent creates content based on PDF type
 func (h *PDFHandler) generatePDFContent(pdfType string, options map[string]interface{}) (string, error) {
 	timestamp := time.Now().Format("January 2, 2006 at 3:04 PM")
-	
+
 	templates := map[string]string{
 		"nutrition": fmt.Sprintf(`DoctorHealthy1 - Nutrition Report
 Generated: %s

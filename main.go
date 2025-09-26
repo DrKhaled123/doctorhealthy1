@@ -246,7 +246,7 @@ func (cv *CustomValidator) Validate(i interface{}) error {
 func serveStaticFile(c echo.Context, relPath string, embedded embed.FS) error {
 	// Prefer on-disk to allow hot updates in deployments mounting /frontend
 	diskPath := filepath.Join("frontend", relPath)
-	if f, err := os.Open(diskPath); err == nil {
+	if f, err := os.Open(diskPath); err == nil { // nosec G304 - controlled path within frontend directory
 		defer func() { _ = f.Close() }()
 		// Determine content type
 		ext := filepath.Ext(relPath)
@@ -260,7 +260,7 @@ func serveStaticFile(c echo.Context, relPath string, embedded embed.FS) error {
 	}
 
 	// Fallback to embedded
-	data, err := embedded.ReadFile(filepath.ToSlash(filepath.Join("frontend", relPath)))
+	data, err := embedded.ReadFile(filepath.ToSlash(filepath.Join("frontend", relPath))) // nosec G304 - controlled path within embedded assets
 	if err != nil {
 		return echo.NewHTTPError(http.StatusNotFound, "asset not found")
 	}
