@@ -2,14 +2,16 @@
 # Force cache invalidation - update this comment to force rebuild
 # Build version: 1759252953
 
-FROM golang:1.22-alpine AS builder
+FROM golang:1.22-bookworm AS builder
 
 # Install build dependencies
-RUN apk add --no-cache git gcc musl-dev sqlite-dev
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
+    build-essential pkg-config libsqlite3-dev && \
+    rm -rf /var/lib/apt/lists/*
 
 # Create app user for build stage
-RUN addgroup -g 1000 appuser && \
-    adduser -D -u 1000 -G appuser appuser
+RUN groupadd -g 1000 appuser && \
+    useradd -u 1000 -g appuser -s /bin/bash -m appuser
 
 WORKDIR /app
 
