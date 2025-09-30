@@ -1,6 +1,6 @@
 # Multi-stage Dockerfile for Go (Echo) API with SQLite (CGO enabled)
 
-FROM golang:1.22-bookworm AS builder
+FROM golang:1.24-bookworm AS builder
 
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
     build-essential pkg-config && \
@@ -24,7 +24,7 @@ RUN go build -ldflags="-s -w" -o server .
 FROM debian:bookworm-slim AS runtime
 
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
-    ca-certificates curl tzdata && \
+    ca-certificates curl tzdata wget && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -44,5 +44,3 @@ EXPOSE 8081
 USER appuser
 
 CMD ["/app/server"]
-
-
