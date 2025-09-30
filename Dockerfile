@@ -23,15 +23,17 @@ COPY . .
 # Build the application with optimizations
 RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -ldflags="-w -s" -o main .
 
-# Final stage
-FROM alpine:latest
+# Final stage - Use Debian for better SQLite CGO compatibility
+FROM debian:bookworm-slim
 
 # Install runtime dependencies INCLUDING curl for health checks
-RUN apk --no-cache add ca-certificates sqlite-libs tzdata curl
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
+    ca-certificates curl && \
+    rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
-RUN addgroup -g 1000 appuser && \
-    adduser -D -u 1000 -G appuser appuser
+RUN groupadd -g 1000 appuser && \
+    useradd -u 1000 -g appuser -s /bin/bash -m appuser
 
 WORKDIR /app
 
