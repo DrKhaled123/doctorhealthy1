@@ -1,0 +1,424 @@
+# Hybrid Workflow Examples
+# Collection of pre-defined workflows for common scenarios
+
+examples:
+
+  # Complete CI/CD Pipeline
+  ci_cd_pipeline:
+    name: "Complete CI/CD Pipeline"
+    description: "Full testing and deployment pipeline with all safety checks"
+    servers:
+      testing: "mcp-servers/hybrid_testing_server_enhanced.py"
+      deployment: "mcp-servers/hybrid_deployment_server_enhanced.py"
+    max_parallel: 3
+    steps:
+      - name: "validate_environment"
+        tool: "run_unit_tests"
+        server: "testing"
+        params:
+          test_type: "python"
+          test_path: "tests/environment"
+        continue_on_error: false
+
+      - name: "unit_tests"
+        tool: "run_unit_tests"
+        server: "testing"
+        params:
+          test_type: "python"
+          test_path: "tests/unit"
+          coverage: true
+          verbose: true
+        depends_on: ["validate_environment"]
+
+      - name: "integration_tests"
+        tool: "run_integration_tests"
+        server: "testing"
+        params:
+          tool: "postman"
+          config: "tests/api.postman_collection.json"
+          environment: "tests/test.env.json"
+        depends_on: ["unit_tests"]
+
+      - name: "performance_tests"
+        tool: "run_performance_tests"
+        server: "testing"
+        params:
+          tool: "k6"
+          target_url: "http://localhost:8080"
+          virtual_users: 100
+          duration: "60s"
+        depends_on: ["integration_tests"]
+
+      - name: "security_tests"
+        tool: "run_security_tests"
+        server: "testing"
+        params:
+          tool: "nuclei"
+          target: "http://localhost:8080"
+          severity: "medium"
+        depends_on: ["unit_tests"]
+
+      - name: "build_application"
+        tool: "build_docker_image"
+        server: "deployment"
+        params:
+          dockerfile_path: "."
+          image_name: "myapp:${BUILD_NUMBER:-latest}"
+          build_args:
+            BUILD_TIME: "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+            VERSION: "${VERSION:-1.0.0}"
+          security_scan: true
+        depends_on: ["unit_tests", "integration_tests", "security_tests"]
+
+      - name: "deploy_to_staging"
+        tool: "deploy_to_cloud"
+        server: "deployment"
+        params:
+          platform: "coolify"
+          service: "container"
+          config:
+            host: "staging.example.com:8000"
+            api_token: "${COOLIFY_STAGING_TOKEN}"
+            app_uuid: "${STAGING_APP_UUID}"
+        depends_on: ["build_application"]
+
+      - name: "health_check_staging"
+        tool: "health_check_deployment"
+        server: "deployment"
+        params:
+          app_url: "https://staging.example.com"
+          health_endpoints: ["/health", "/ready", "/api/v1/status"]
+          expected_response_time: 2000
+          retries: 5
+        depends_on: ["deploy_to_staging"]
+
+      - name: "deploy_to_production"
+        tool: "deploy_to_cloud"
+        server: "deployment"
+        params:
+          platform: "gcp"
+          service: "cloud-run"
+          config:
+            project_id: "${GCP_PROJECT_ID}"
+            service_name: "my-api"
+            image: "gcr.io/${GCP_PROJECT_ID}/myapp:${BUILD_NUMBER:-latest}"
+            region: "us-central1"
+            allow_unauthenticated: true
+        depends_on: ["health_check_staging"]
+
+      - name: "final_health_check"
+        tool: "health_check_deployment"
+        server: "deployment"
+        params:
+          app_url: "https://my-api-abcdef.a.run.app"
+          health_endpoints: ["/health", "/ready", "/api/v1/health"]
+          expected_response_time: 1500
+          retries: 10
+        depends_on: ["deploy_to_production"]
+
+  # API Development Workflow
+  api_development:
+    name: "API Development Workflow"
+    description: "Develop, test, and validate APIs"
+    servers:
+      testing: "mcp-servers/hybrid_testing_server_enhanced.py"
+      deployment: "mcp-servers/hybrid_deployment_server_enhanced.py"
+    max_parallel: 2
+    steps:
+      - name: "validate_openapi_spec"
+        tool: "validate_api_endpoints"
+        server: "testing"
+        params:
+          base_url: "http://localhost:8080"
+          endpoints:
+            - path: "/health"
+              method: "GET"
+              expected_status: 200
+            - path: "/api/v1/users"
+              method: "GET"
+              expected_status: 200
+            - path: "/api/v1/users"
+              method: "POST"
+              expected_status: 201
+              headers:
+                Content-Type: "application/json"
+              body:
+                name: "test"
+                email: "test@example.com"
+            - path: "/api/v1/users/1"
+              method: "GET"
+              expected_status: 200
+            - path: "/api/v1/users/1"
+              method: "PUT"
+              expected_status: 200
+            - path: "/api/v1/users/1"
+              method: "DELETE"
+              expected_status: 204
+
+      - name: "load_testing"
+        tool: "run_performance_tests"
+        server: "testing"
+        params:
+          tool: "artillery"
+          script: "tests/load-test.yaml"
+        depends_on: ["validate_openapi_spec"]
+
+      - name: "security_assessment"
+        tool: "run_security_tests"
+        server: "testing"
+        params:
+          tool: "owasp-zap"
+          target: "http://localhost:8080"
+          scan_type: "quick"
+        depends_on: ["validate_openapi_spec"]
+
+  # Database Migration Workflow
+  database_migration:
+    name: "Database Migration Workflow"
+    description: "Safe database migration with backup and rollback"
+    servers:
+      deployment: "mcp-servers/hybrid_deployment_server_enhanced.py"
+    max_parallel: 1
+    steps:
+      - name: "create_backup"
+        tool: "access_coolify_api"
+        server: "deployment"
+        params:
+          operation: "backup"
+          app_uuid: "${APP_UUID}"
+          api_token: "${COOLIFY_TOKEN}"
+          host: "${COOLIFY_HOST}"
+
+      - name: "validate_backup"
+        tool: "access_web_service"
+        server: "deployment"
+        params:
+          url: "${COOLIFY_HOST}/api/v1/applications/${APP_UUID}/backups"
+          method: "GET"
+          headers:
+            Authorization: "Bearer ${COOLIFY_TOKEN}"
+        depends_on: ["create_backup"]
+
+      - name: "run_migrations"
+        tool: "access_web_service"
+        server: "deployment"
+        params:
+          url: "${APP_URL}/api/migrate"
+          method: "POST"
+          headers:
+            Authorization: "Bearer ${MIGRATION_TOKEN}"
+            Content-Type: "application/json"
+          body:
+            direction: "up"
+            target: "latest"
+        depends_on: ["validate_backup"]
+
+      - name: "verify_migration"
+        tool: "health_check_deployment"
+        server: "deployment"
+        params:
+          app_url: "${APP_URL}"
+          health_endpoints: ["/health", "/api/v1/health"]
+          expected_response_time: 3000
+        depends_on: ["run_migrations"]
+
+  # Security Audit Workflow
+  security_audit:
+    name: "Comprehensive Security Audit"
+    description: "Full security assessment and compliance check"
+    servers:
+      testing: "mcp-servers/hybrid_testing_server_enhanced.py"
+    max_parallel: 2
+    steps:
+      - name: "dependency_scan"
+        tool: "run_security_tests"
+        server: "testing"
+        params:
+          tool: "semgrep"
+          target: "."
+          severity: "high"
+
+      - name: "infrastructure_scan"
+        tool: "run_security_tests"
+        server: "testing"
+        params:
+          tool: "nuclei"
+          target: "${TARGET_URL}"
+          severity: "critical"
+
+      - name: "docker_image_scan"
+        tool: "run_security_tests"
+        server: "testing"
+        params:
+          tool: "docker"
+          target: "${IMAGE_NAME}"
+          scan_type: "full"
+
+      - name: "api_security_test"
+        tool: "run_security_tests"
+        server: "testing"
+        params:
+          tool: "owasp-zap"
+          target: "${TARGET_URL}"
+          scan_type: "full"
+
+  # Disaster Recovery Test
+  disaster_recovery_test:
+    name: "Disaster Recovery Test"
+    description: "Test backup and recovery procedures"
+    servers:
+      deployment: "mcp-servers/hybrid_deployment_server_enhanced.py"
+    max_parallel: 1
+    steps:
+      - name: "create_test_backup"
+        tool: "access_coolify_api"
+        server: "deployment"
+        params:
+          operation: "backup"
+          app_uuid: "${TEST_APP_UUID}"
+          api_token: "${COOLIFY_TOKEN}"
+
+      - name: "simulate_failure"
+        tool: "access_coolify_api"
+        server: "deployment"
+        params:
+          operation: "stop"
+          app_uuid: "${TEST_APP_UUID}"
+          api_token: "${COOLIFY_TOKEN}"
+
+      - name: "restore_from_backup"
+        tool: "access_coolify_api"
+        server: "deployment"
+        params:
+          operation: "restore"
+          app_uuid: "${TEST_APP_UUID}"
+          api_token: "${COOLIFY_TOKEN}"
+          params:
+            backup_id: "latest"
+
+      - name: "verify_restoration"
+        tool: "health_check_deployment"
+        server: "deployment"
+        params:
+          app_url: "${TEST_APP_URL}"
+          health_endpoints: ["/health", "/ready"]
+          expected_response_time: 5000
+          retries: 10
+
+  # Multi-Cloud Deployment
+  multi_cloud_deployment:
+    name: "Multi-Cloud Deployment"
+    description: "Deploy to multiple cloud providers simultaneously"
+    servers:
+      deployment: "mcp-servers/hybrid_deployment_server_enhanced.py"
+    max_parallel: 3
+    steps:
+      - name: "deploy_to_gcp"
+        tool: "deploy_to_cloud"
+        server: "deployment"
+        params:
+          platform: "gcp"
+          service: "cloud-run"
+          config:
+            project_id: "${GCP_PROJECT_ID}"
+            service_name: "api-gcp"
+            image: "gcr.io/${GCP_PROJECT_ID}/myapp:latest"
+            region: "us-central1"
+
+      - name: "deploy_to_aws"
+        tool: "deploy_to_cloud"
+        server: "deployment"
+        params:
+          platform: "aws"
+          service: "ecs"
+          config:
+            cluster: "${AWS_CLUSTER}"
+            service_name: "api-aws"
+            task_definition: "${AWS_TASK_DEFINITION}"
+            region: "${AWS_REGION}"
+
+      - name: "deploy_to_azure"
+        tool: "deploy_to_cloud"
+        server: "deployment"
+        params:
+          platform: "azure"
+          service: "app-service"
+          config:
+            resource_group: "${AZURE_RESOURCE_GROUP}"
+            app_service_plan: "${AZURE_APP_SERVICE_PLAN}"
+            app_name: "api-azure"
+            subscription_id: "${AZURE_SUBSCRIPTION_ID}"
+
+      - name: "health_check_gcp"
+        tool: "health_check_deployment"
+        server: "deployment"
+        params:
+          app_url: "https://api-gcp-abcdef.a.run.app"
+          health_endpoints: ["/health"]
+        depends_on: ["deploy_to_gcp"]
+
+      - name: "health_check_aws"
+        tool: "health_check_deployment"
+        server: "deployment"
+        params:
+          app_url: "https://${AWS_LOAD_BALANCER_URL}"
+          health_endpoints: ["/health"]
+        depends_on: ["deploy_to_aws"]
+
+      - name: "health_check_azure"
+        tool: "health_check_deployment"
+        server: "deployment"
+        params:
+          app_url: "https://api-azure.azurewebsites.net"
+          health_endpoints: ["/health"]
+        depends_on: ["deploy_to_azure"]
+
+  # AI-Powered Testing
+  ai_powered_testing:
+    name: "AI-Powered Testing Workflow"
+    description: "Use AI to generate and validate tests"
+    servers:
+      testing: "mcp-servers/hybrid_testing_server_enhanced.py"
+      deployment: "mcp-servers/hybrid_deployment_server_enhanced.py"
+    max_parallel: 2
+    steps:
+      - name: "generate_test_cases"
+        tool: "access_ai_api"
+        server: "deployment"
+        params:
+          provider: "openai"
+          model: "gpt-4"
+          prompt: "Generate comprehensive test cases for a REST API with user management endpoints"
+          api_key: "${OPENAI_API_KEY}"
+
+      - name: "create_test_files"
+        tool: "access_web_service"
+        server: "deployment"
+        params:
+          url: "http://localhost:8080/api/admin/generate-tests"
+          method: "POST"
+          headers:
+            Authorization: "Bearer ${ADMIN_TOKEN}"
+            Content-Type: "application/json"
+          body:
+            ai_generated: true
+            test_cases: "${AI_TEST_CASES}"
+
+      - name: "execute_generated_tests"
+        tool: "run_unit_tests"
+        server: "testing"
+        params:
+          test_type: "python"
+          test_path: "tests/generated"
+          verbose: true
+        depends_on: ["create_test_files"]
+
+      - name: "validate_ai_results"
+        tool: "access_ai_api"
+        server: "deployment"
+        params:
+          provider: "openai"
+          model: "gpt-4"
+          prompt: "Analyze these test results and suggest improvements: ${TEST_RESULTS}"
+          api_key: "${OPENAI_API_KEY}"
+        depends_on: ["execute_generated_tests"]

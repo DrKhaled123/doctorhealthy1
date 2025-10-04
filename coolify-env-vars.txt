@@ -1,0 +1,16 @@
+# Coolify Environment Variables
+# Generated: Wed Oct  1 09:01:34 EEST 2025
+# Application: hcw0gc8wcwk440gw4c88408o
+
+JWT_SECRET=sE6oOg8fJkAuXZlC21TDQphFVK613/hh5HQQhMsHKMmR5QilVXk2/jDGnPaY+9II
+ENV=production
+PORT=8081
+HOST=0.0.0.0
+LOG_LEVEL=warn
+DB_PATH=/app/data/app.db
+RATE_LIMIT=100
+API_KEY_PREFIX=dh_
+API_KEY_LENGTH=32
+SECURITY_RATE_LIMIT_REQUESTS=100
+SECURITY_RATE_LIMIT_WINDOW=1m
+ALLOWED_ORIGIN=https://my.doctorhealthy1.com

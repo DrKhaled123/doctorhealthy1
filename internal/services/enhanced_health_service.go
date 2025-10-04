@@ -43,10 +43,10 @@ func (s *EnhancedHealthService) loadEnhancedDatabase() error {
 	return s.loadFallbackDatabase()
 }
 
-// loadFallbackDatabase loads fallback database
+// loadFallbackDatabase loads fallback database from VIP files
 func (s *EnhancedHealthService) loadFallbackDatabase() error {
-	// Load existing comprehensive database
-	comprehensivePath := filepath.Join(s.dataPath, "ULTIMATE-COMPREHENSIVE-HEALTH-DATABASE-COMPLETE.js")
+	// Load existing VIP workouts database
+	comprehensivePath := filepath.Join(s.dataPath, "vip-workouts.js")
 
 	if _, err := os.Stat(comprehensivePath); os.IsNotExist(err) {
 		return fmt.Errorf("no database file found")

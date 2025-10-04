@@ -22,7 +22,9 @@ func newTestServices(t *testing.T) (*services.APIKeyService, echo.Context) {
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = db.Close() })
 
-	svc := services.NewAPIKeyService(db, &config.Config{APIKey: config.APIKeyConfig{Length: 16, ExpiryDuration: 24 * time.Hour, Prefix: "ak_"}})
+	svc, err := services.NewAPIKeyService(db, &config.Config{APIKey: config.APIKeyConfig{Length: 16, ExpiryDuration: 24 * time.Hour, Prefix: "ak_"}})
+	require.NoError(t, err, "Failed to create APIKeyService")
+	t.Cleanup(func() { _ = svc.Close() })
 
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)

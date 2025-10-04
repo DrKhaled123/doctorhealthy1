@@ -35,19 +35,9 @@ type UltimateHealthDatabase struct {
 
 // NewUltimateDataService creates a new ultimate data service
 func NewUltimateDataService() *UltimateDataService {
-	service := &UltimateDataService{
-		data:     make(map[string]interface{}),
-		dataPath: "ULTIMATE-COMPREHENSIVE-HEALTH-DATABASE-COMPLETE.js",
+	return &UltimateDataService{
+		dataPath: "vip-complaints.js", // Using VIP complaints database
 	}
-
-	// Load data on initialization
-	if err := service.LoadData(); err != nil {
-		log.Printf("Warning: Failed to load ultimate database: %v", err)
-		// Try fallback databases
-		service.loadFallbackDatabases()
-	}
-
-	return service
 }
 
 // loadFallbackDatabases loads individual complete databases as fallback
@@ -70,10 +60,10 @@ func (s *UltimateDataService) loadFallbackDatabases() {
 	}
 }
 
-// loadHealthDatabase loads the complete health database
+// loadHealthDatabase loads the complete health database from VIP files
 func (s *UltimateDataService) loadHealthDatabase() error {
-	log.Printf("DEBUG: Attempting to read comprehensive-health-database-COMPLETE.js")
-	content, err := os.ReadFile("comprehensive-health-database-COMPLETE.js")
+	log.Printf("DEBUG: Attempting to read vip-drugs-nutrition.js")
+	content, err := os.ReadFile("vip-drugs-nutrition.js")
 	if err != nil {
 		log.Printf("DEBUG: Failed to read file: %v", err)
 		return err
@@ -114,9 +104,9 @@ func (s *UltimateDataService) loadHealthDatabase() error {
 	return nil
 }
 
-// loadDiseasesDatabase loads the complete diseases database
+// loadDiseasesDatabase loads the complete diseases database from VIP injuries
 func (s *UltimateDataService) loadDiseasesDatabase() error {
-	content, err := os.ReadFile("ULTIMATE-DISEASES-DATABASE-COMPLETE.js")
+	content, err := os.ReadFile("vip-injuries.js")
 	if err != nil {
 		return err
 	}
@@ -139,9 +129,9 @@ func (s *UltimateDataService) loadDiseasesDatabase() error {
 	return nil
 }
 
-// loadVitaminsMineralsDatabase loads the vitamins/minerals database
+// loadVitaminsMineralsDatabase loads the vitamins/minerals database from VIP drugs-nutrition
 func (s *UltimateDataService) loadVitaminsMineralsDatabase() error {
-	content, err := os.ReadFile("vitamins-minerals-comprehensive.js")
+	content, err := os.ReadFile("vip-drugs-nutrition.js")
 	if err != nil {
 		return err
 	}

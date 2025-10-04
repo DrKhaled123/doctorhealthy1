@@ -15,9 +15,12 @@ import (
 
 func setupTestDB(t *testing.T) *sql.DB {
 	t.Helper()
-	dbPath := t.TempDir() + "/test.db"
+	dbPath := ":memory:"
 	db, err := database.Initialize(dbPath)
 	require.NoError(t, err)
+	// SQLite single-writer optimization
+	db.SetMaxOpenConns(1)
+	db.SetMaxIdleConns(1)
 	t.Cleanup(func() { _ = db.Close() })
 	return db
 }
@@ -32,7 +35,10 @@ func newTestService(t *testing.T) *APIKeyService {
 			Prefix:         "ak_",
 		},
 	}
-	return NewAPIKeyService(db, cfg)
+	svc, err := NewAPIKeyService(db, cfg)
+	require.NoError(t, err, "Failed to create APIKeyService")
+	t.Cleanup(func() { _ = svc.Close() })
+	return svc
 }
 
 func TestHasAnyPermission(t *testing.T) {

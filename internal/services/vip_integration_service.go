@@ -71,13 +71,15 @@ func (vis *VIPIntegrationService) GetVIPDataSummary() (*VIPDataSummary, error) {
 		TotalVitaminsMinerals:  totalVitaminsMinerals,
 		TotalWorkoutTechniques: len(healthDB.WorkoutTechniques),
 		DataSources: []string{
-			"comprehensive-health-database-COMPLETE.js",
-			"comprehensive-complaints-database-COMPLETE.js",
-			"comprehensive-diseases-database-COMPLETE.js",
-			"vitamins-minerals-comprehensive.js",
+			"vip-workouts.js",
+			"vip-complaints.js",
+			"vip-injuries.js",
+			"vip-drugs-nutrition.js",
+			"vip-workouts-techniques.js",
+			"vip-type-plans.js",
 		},
 		IntegrationStatus: "COMPLETE - All VIP JSON data integrated",
-		LastUpdated:       "2024-09-16",
+		LastUpdated:       "2025-09-30",
 	}, nil
 }
 

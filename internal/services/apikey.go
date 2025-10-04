@@ -22,20 +22,88 @@ import (
 type APIKeyService struct {
 	db  *sql.DB
 	cfg *config.Config
+	// Prepared statements for frequently used queries
+	getByKeyStmt    *sql.Stmt
+	hasAnyKeysStmt  *sql.Stmt
+	validateKeyStmt *sql.Stmt
 }
 
-// NewAPIKeyService creates a new API key service
-func NewAPIKeyService(db *sql.DB, cfg *config.Config) *APIKeyService {
-	return &APIKeyService{
+// NewAPIKeyService creates a new API key service with prepared statements
+func NewAPIKeyService(db *sql.DB, cfg *config.Config) (*APIKeyService, error) {
+	s := &APIKeyService{
 		db:  db,
 		cfg: cfg,
 	}
+
+	// Prepare frequently used statements
+	var err error
+
+	// Prepare GetAPIKeyByKey statement
+	s.getByKeyStmt, err = db.Prepare(`
+		SELECT id, key, name, description, permissions, is_active, 
+			   expires_at, last_used_at, created_at, updated_at, 
+			   usage_count, rate_limit, rate_limit_used
+		FROM api_keys 
+		WHERE key = ? AND is_active = 1
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("failed to prepare getByKey statement: %w", err)
+	}
+
+	// Prepare HasAnyKeys statement
+	s.hasAnyKeysStmt, err = db.Prepare("SELECT COUNT(1) FROM api_keys")
+	if err != nil {
+		s.Close() // Clean up already prepared statements
+		return nil, fmt.Errorf("failed to prepare hasAnyKeys statement: %w", err)
+	}
+
+	// Prepare ValidateKey statement
+	s.validateKeyStmt, err = db.Prepare(`
+		SELECT id, is_active, expires_at 
+		FROM api_keys 
+		WHERE key = ?
+	`)
+	if err != nil {
+		s.Close()
+		return nil, fmt.Errorf("failed to prepare validateKey statement: %w", err)
+	}
+
+	return s, nil
+}
+
+// Close closes all prepared statements
+func (s *APIKeyService) Close() error {
+	var errs []error
+
+	if s.getByKeyStmt != nil {
+		if err := s.getByKeyStmt.Close(); err != nil {
+			errs = append(errs, fmt.Errorf("getByKeyStmt: %w", err))
+		}
+	}
+
+	if s.hasAnyKeysStmt != nil {
+		if err := s.hasAnyKeysStmt.Close(); err != nil {
+			errs = append(errs, fmt.Errorf("hasAnyKeysStmt: %w", err))
+		}
+	}
+
+	if s.validateKeyStmt != nil {
+		if err := s.validateKeyStmt.Close(); err != nil {
+			errs = append(errs, fmt.Errorf("validateKeyStmt: %w", err))
+		}
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("errors closing prepared statements: %v", errs)
+	}
+
+	return nil
 }
 
 // HasAnyKeys returns true if any API key exists
 func (s *APIKeyService) HasAnyKeys(ctx context.Context) (bool, error) {
 	var count int
-	err := s.db.QueryRowContext(ctx, "SELECT COUNT(1) FROM api_keys").Scan(&count)
+	err := s.hasAnyKeysStmt.QueryRowContext(ctx).Scan(&count)
 	if err != nil {
 		return false, err
 	}
@@ -173,24 +241,16 @@ func (s *APIKeyService) GetAPIKey(ctx context.Context, id string) (*models.APIKe
 	return &apiKey, nil
 }
 
-// GetAPIKeyByKey retrieves an API key by its key value
+// GetAPIKeyByKey retrieves an API key by its key value (uses prepared statement)
 func (s *APIKeyService) GetAPIKeyByKey(ctx context.Context, key string) (*models.APIKey, error) {
 	if key == "" {
 		return nil, fmt.Errorf("API key cannot be empty")
 	}
 
-	query := `
-		SELECT id, key, name, description, permissions, is_active, 
-			   expires_at, last_used_at, created_at, updated_at, 
-			   usage_count, rate_limit, rate_limit_used
-		FROM api_keys 
-		WHERE key = ? AND is_active = 1
-	`
-
 	var apiKey models.APIKey
 	var permissionsJSON string
 
-	err := s.db.QueryRowContext(ctx, query, key).Scan(
+	err := s.getByKeyStmt.QueryRowContext(ctx, key).Scan(
 		&apiKey.ID,
 		&apiKey.Key,
 		&apiKey.Name,
@@ -587,6 +647,22 @@ func hasAnyPermission(granted, required []string) bool {
 		}
 	}
 	return false
+}
+
+// ValidateAPIKey validates if an API key exists and is active
+func (s *APIKeyService) ValidateAPIKey(apiKey string) (bool, error) {
+	// Create context with timeout to prevent hanging
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := s.GetAPIKeyByKey(ctx, apiKey)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }
 
 // hasAllPermissions returns true if the granted list contains all required permissions.

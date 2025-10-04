@@ -308,9 +308,6 @@ func (rl *RecipeLoader) GetRecipeStats() (map[string]int, error) {
 		return nil, err
 	}
 	stats["total"] = total
-	if err != nil {
-		return nil, err
-	}
 
 	// By cuisine
 	cuisines := []string{"arabian_gulf", "shami", "egyptian", "moroccan"}

@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"sync"
@@ -19,6 +20,13 @@ type inMemoryMonthlyQuota struct {
 
 var monthlyQuota = &inMemoryMonthlyQuota{counts: make(map[string]map[string]int)}
 
+// getNextMonthReset returns the timestamp for when the quota resets (next month)
+func getNextMonthReset() string {
+	now := time.Now().UTC()
+	nextMonth := time.Date(now.Year(), now.Month()+1, 1, 0, 0, 0, 0, time.UTC)
+	return nextMonth.Format(time.RFC3339)
+}
+
 // UserQuotaMiddleware enforces per-user monthly quotas for generate endpoints without requiring API keys.
 // Identity resolution order: JWT user_id (if set by OptionalJWT) -> anon cookie. If anon cookie missing, it will be created.
 // Limits:
@@ -34,57 +42,90 @@ func UserQuotaMiddleware() echo.MiddlewareFunc {
 				return next(c)
 			}
 
-			// Resolve identity
+			// Resolve identity - fix identity resolution order
 			identity := ""
-			if uid, ok := c.Get("user_id").(string); ok && uid != "" {
-				identity = "user:" + uid
+			if uid, ok := c.Get("user_id").(string); ok && uid != "" && strings.TrimSpace(uid) != "" {
+				identity = "user:" + strings.TrimSpace(uid)
 			} else {
 				// Ensure anon cookie exists
 				cookie, err := c.Cookie("anon_id")
-				if err != nil || cookie == nil || cookie.Value == "" {
+				if err != nil || cookie == nil || cookie.Value == "" || strings.TrimSpace(cookie.Value) == "" {
 					anon := uuid.New().String()
-					newC := &http.Cookie{Name: "anon_id", Value: anon, Path: "/", Expires: time.Now().Add(365 * 24 * time.Hour), HttpOnly: true}
+					newC := &http.Cookie{
+						Name:     "anon_id",
+						Value:    anon,
+						Path:     "/",
+						Expires:  time.Now().Add(365 * 24 * time.Hour),
+						HttpOnly: true,
+						Secure:   true,
+						SameSite: http.SameSiteLaxMode,
+					}
 					c.SetCookie(newC)
 					identity = "anon:" + anon
 				} else {
-					identity = "anon:" + cookie.Value
+					identity = "anon:" + strings.TrimSpace(cookie.Value)
 				}
 			}
 
-			// Determine plan
+			// Determine plan - fix case sensitivity and validation
 			plan := "free"
-			if pc, err := c.Cookie("plan"); err == nil && pc != nil && pc.Value != "" {
-				plan = strings.ToLower(pc.Value)
-			}
-
-			// Determine monthly limit
-			limit := 3
-			if plan == "pro" {
-				limit = 50
-			} else if plan == "lifetime" {
-				limit = 1_000_000 // effectively unlimited
-			} else {
-				// free plan bonus if shared promise cookie present
-				if sc, err := c.Cookie("shared"); err == nil && sc != nil && strings.ToLower(sc.Value) == "yes" {
-					limit = 11
+			if pc, err := c.Cookie("plan"); err == nil && pc != nil && strings.TrimSpace(pc.Value) != "" {
+				planValue := strings.ToLower(strings.TrimSpace(pc.Value))
+				// Validate plan values
+				switch planValue {
+				case "pro", "lifetime", "free":
+					plan = planValue
+				default:
+					plan = "free" // Default to free for invalid plans
 				}
 			}
 
-			// Count usage
+			// Determine monthly limit - fix shared bonus calculation
+			limit := 3
+			switch plan {
+			case "pro":
+				limit = 50
+			case "lifetime":
+				limit = 1_000_000 // effectively unlimited
+			default: // free plan
+				limit = 3
+				// Fix shared bonus calculation - only apply to free plan
+				if sc, err := c.Cookie("shared"); err == nil && sc != nil {
+					sharedValue := strings.ToLower(strings.TrimSpace(sc.Value))
+					if sharedValue == "yes" || sharedValue == "true" {
+						limit = 11
+					}
+				}
+			}
+
+			// Count usage with better month key generation
 			now := time.Now().UTC()
 			monthKey := now.Format("2006-01")
 
 			monthlyQuota.mu.Lock()
-			if _, ok := monthlyQuota.counts[identity]; !ok {
+			defer monthlyQuota.mu.Unlock()
+
+			if monthlyQuota.counts[identity] == nil {
 				monthlyQuota.counts[identity] = make(map[string]int)
 			}
+
 			used := monthlyQuota.counts[identity][monthKey]
 			if used >= limit {
-				monthlyQuota.mu.Unlock()
-				return echo.NewHTTPError(http.StatusTooManyRequests, "monthly quota exceeded")
+				return echo.NewHTTPError(http.StatusTooManyRequests, map[string]interface{}{
+					"error":  "monthly quota exceeded",
+					"used":   used,
+					"limit":  limit,
+					"plan":   plan,
+					"resets": getNextMonthReset(),
+				})
 			}
+
 			monthlyQuota.counts[identity][monthKey] = used + 1
-			monthlyQuota.mu.Unlock()
+
+			// Add quota info to response headers for debugging
+			c.Response().Header().Set("X-Quota-Used", fmt.Sprintf("%d", used+1))
+			c.Response().Header().Set("X-Quota-Limit", fmt.Sprintf("%d", limit))
+			c.Response().Header().Set("X-Quota-Plan", plan)
 
 			return next(c)
 		}

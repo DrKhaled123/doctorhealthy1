@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -25,9 +26,11 @@ func UserRateLimit(r rate.Limit, burst int) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			uid, _ := c.Get("user_id").(string)
+			uid = strings.TrimSpace(uid)
 			if uid == "" {
 				return next(c)
 			}
+
 			userLimiterMux.Lock()
 			le, ok := userLimiters[uid]
 			if !ok {
@@ -35,13 +38,25 @@ func UserRateLimit(r rate.Limit, burst int) echo.MiddlewareFunc {
 				userLimiters[uid] = le
 			}
 			le.last = time.Now()
+
+			// Clean up old limiters periodically (basic memory management)
+			if len(userLimiters) > 10000 { // arbitrary limit to prevent memory leaks
+				for id, entry := range userLimiters {
+					if time.Since(entry.last) > time.Hour { // remove limiters unused for 1 hour
+						delete(userLimiters, id)
+					}
+				}
+			}
 			userLimiterMux.Unlock()
 
 			if !le.limiter.Allow() {
-				return echo.NewHTTPError(http.StatusTooManyRequests, "user rate limit exceeded")
+				return echo.NewHTTPError(http.StatusTooManyRequests, map[string]interface{}{
+					"error":       "user rate limit exceeded",
+					"user_id":     uid,
+					"retry_after": "1s", // suggest retry time
+				})
 			}
 			return next(c)
 		}
 	}
 }
-

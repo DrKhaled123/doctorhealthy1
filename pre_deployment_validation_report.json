@@ -1,0 +1,242 @@
+{
+  "validation_timestamp": "2025-09-27 19:50:47",
+  "overall_status": "failed",
+  "tests": [
+    {
+      "category": "Health Check",
+      "tests": [
+        {
+          "name": "Health Endpoint",
+          "status": "passed",
+          "details": {
+            "success": true,
+            "status_code": 200,
+            "expected_status": 200,
+            "response_time_ms": 335.41,
+            "content_length": 309
+          }
+        },
+        {
+          "name": "Root Endpoint",
+          "status": "failed",
+          "details": {
+            "success": false,
+            "status_code": 429,
+            "expected_status": 200,
+            "response_time_ms": 14.97,
+            "content_length": 442
+          }
+        },
+        {
+          "name": "API Documentation",
+          "status": "failed",
+          "details": {
+            "success": false,
+            "status_code": 429,
+            "expected_status": 200,
+            "response_time_ms": 6.66,
+            "content_length": 450
+          }
+        }
+      ],
+      "status": "failed"
+    },
+    {
+      "category": "Security",
+      "tests": [
+        {
+          "name": "XSS Protection",
+          "status": "passed",
+          "details": {
+            "protected": true,
+            "status_code": 429,
+            "payload_found": false
+          }
+        },
+        {
+          "name": "SQL Injection Protection",
+          "status": "passed",
+          "details": {
+            "protected": true,
+            "status_code": 429
+          }
+        },
+        {
+          "name": "Rate Limiting",
+          "status": "passed",
+          "details": {
+            "active": true,
+            "responses": [
+              429,
+              429,
+              429,
+              429,
+              429,
+              429,
+              429,
+              429,
+              429,
+              429
+            ],
+            "rate_limit_triggered": true
+          }
+        },
+        {
+          "name": "CORS Headers",
+          "status": "failed",
+          "details": {
+            "configured": false,
+            "headers": {
+              "Access-Control-Allow-Origin": null,
+              "Access-Control-Allow-Methods": null,
+              "Access-Control-Allow-Headers": null
+            }
+          }
+        }
+      ],
+      "status": "failed"
+    },
+    {
+      "category": "API Endpoints",
+      "tests": [
+        {
+          "name": "GET /api/health",
+          "status": "failed",
+          "details": {
+            "success": false,
+            "status_code": 429,
+            "expected_status": 200,
+            "response_time_ms": 2.18,
+            "content_length": 452
+          }
+        },
+        {
+          "name": "GET /api/recipes",
+          "status": "failed",
+          "details": {
+            "success": false,
+            "status_code": 429,
+            "expected_status": 200,
+            "response_time_ms": 3.43,
+            "content_length": 453
+          }
+        },
+        {
+          "name": "GET /api/diseases",
+          "status": "failed",
+          "details": {
+            "success": false,
+            "status_code": 429,
+            "expected_status": 200,
+            "response_time_ms": 21.91,
+            "content_length": 454
+          }
+        },
+        {
+          "name": "GET /api/complaints",
+          "status": "failed",
+          "details": {
+            "success": false,
+            "status_code": 429,
+            "expected_status": 200,
+            "response_time_ms": 1.98,
+            "content_length": 456
+          }
+        },
+        {
+          "name": "POST /api/auth/login",
+          "status": "failed",
+          "details": {
+            "success": false,
+            "status_code": 429,
+            "expected_status": 400,
+            "response_time_ms": 3.81,
+            "content_length": 457
+          }
+        }
+      ],
+      "status": "failed"
+    },
+    {
+      "category": "Performance",
+      "tests": [
+        {
+          "name": "Response Time",
+          "status": "failed",
+          "details": {
+            "error": "Could not measure response time"
+          }
+        },
+        {
+          "name": "Memory Usage",
+          "status": "passed",
+          "details": {
+            "status": "passed",
+            "memory_percent": 1.2,
+            "process_info": "/Applications/Google"
+          }
+        }
+      ],
+      "status": "failed"
+    },
+    {
+      "category": "Docker Build",
+      "tests": [
+        {
+          "name": "Dockerfile Exists",
+          "status": "passed",
+          "details": {
+            "path": "Dockerfile",
+            "exists": true
+          }
+        },
+        {
+          "name": "Dockerfile Syntax",
+          "status": "warning",
+          "details": {
+            "status": "warning",
+            "message": "Docker build timed out (may indicate slow build)"
+          }
+        },
+        {
+          "name": "Dockerignore File",
+          "status": "passed",
+          "details": {
+            "path": ".dockerignore",
+            "exists": true
+          }
+        }
+      ],
+      "status": "warning"
+    },
+    {
+      "category": "Database",
+      "tests": [
+        {
+          "name": "Database Files",
+          "status": "warning",
+          "details": {
+            "message": "No database files found, using in-memory database"
+          }
+        },
+        {
+          "name": "Database Connectivity",
+          "status": "passed",
+          "details": {
+            "status": "passed",
+            "status_code": 200,
+            "response_size": 4357
+          }
+        }
+      ],
+      "status": "warning"
+    }
+  ],
+  "summary": {
+    "total_categories": 6,
+    "passed": 0,
+    "warnings": 2,
+    "failed": 4,
+    "success_rate": 0.0
+  }
+}

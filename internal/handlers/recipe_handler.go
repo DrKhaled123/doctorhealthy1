@@ -52,7 +52,8 @@ func hasPermission(granted []string, required string) bool {
 	}
 	reqLower := strings.ToLower(required)
 	for _, p := range granted {
-		if strings.ToLower(p) == reqLower || strings.ToLower(p) == "admin" {
+		pLower := strings.ToLower(p)
+		if pLower == reqLower || pLower == "admin" || pLower == "admin:all" {
 			return true
 		}
 	}

@@ -230,6 +230,7 @@ type ErrorResponse struct {
 	Code      string            `json:"code,omitempty"`
 	Details   map[string]string `json:"details,omitempty"`
 	Timestamp time.Time         `json:"timestamp"`
+	TraceID   string            `json:"trace_id,omitempty"`
 }
 
 // SuccessResponse represents a generic success response

@@ -22,6 +22,13 @@ RUN go mod download
 # Copy source code
 COPY . .
 
+# Verify frontend directory exists (critical for serving UI)
+RUN if [ ! -d "frontend" ]; then \
+        echo "❌ ERROR: frontend directory not found!" && exit 1; \
+    else \
+        echo "✅ Frontend directory found with $(ls -1 frontend | wc -l) files"; \
+    fi
+
 # Build the application with optimizations
 RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -ldflags="-w -s" -o main .
 
@@ -48,12 +55,12 @@ RUN mkdir -p /app/data && chown -R appuser:appuser /app/data
 # Switch to non-root user
 USER appuser
 
-# Expose port
-EXPOSE 8080
+# Expose port (matches internal application port)
+EXPOSE 8081
 
-# Health check using curl (NOT wget)
-HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:8080/health || exit 1
+# Enhanced health check with proper port and increased resilience
+HEALTHCHECK --interval=15s --timeout=10s --start-period=30s --retries=5 \
+    CMD curl -f http://localhost:8081/health || exit 1
 
 # Run the application
 CMD ["./main"]

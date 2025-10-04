@@ -1,0 +1,299 @@
+# ================================================================
+# COMPREHENSIVE TESTING MAKEFILE
+# Implements the Hybrid Testing Plan with QA-GPT Integration
+# ================================================================
+
+.PHONY: help test test-unit test-integration test-security test-performance test-all qa-gpt clean
+
+# Colors for output
+GREEN  := $(shell tput -Txterm setaf 2)
+YELLOW := $(shell tput -Txterm setaf 3)
+RED    := $(shell tput -Txterm setaf 1)
+BLUE   := $(shell tput -Txterm setaf 4)
+RESET  := $(shell tput -Txterm sgr0)
+
+help: ## Show this help message
+	@echo '$(BLUE)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(RESET)'
+	@echo '$(BLUE)  Comprehensive Testing Framework$(RESET)'
+	@echo '$(BLUE)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(RESET)'
+	@echo ''
+	@echo 'Usage:'
+	@echo '  $(YELLOW)make$(RESET) $(GREEN)<target>$(RESET)'
+	@echo ''
+	@echo 'Targets:'
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  $(YELLOW)%-20s$(RESET) %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@echo ''
+
+# ================================================================
+# Phase 1: Unit Tests
+# ================================================================
+
+test-unit: ## Run unit tests with coverage
+	@echo '$(BLUE)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(RESET)'
+	@echo '$(BLUE)  Phase 1: Unit Tests$(RESET)'
+	@echo '$(BLUE)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(RESET)'
+	@echo '$(YELLOW)Running Go unit tests with coverage...$(RESET)'
+	go test -v -race -coverprofile=coverage/unit.out -covermode=atomic ./...
+	go tool cover -html=coverage/unit.out -o coverage/unit.html
+	@echo '$(GREEN)✓ Unit tests completed$(RESET)'
+	@echo '$(YELLOW)Coverage report: coverage/unit.html$(RESET)'
+	@echo ''
+
+test-unit-verbose: ## Run unit tests with verbose output
+	@echo '$(BLUE)Running verbose unit tests...$(RESET)'
+	go test -v -race -coverprofile=coverage/unit-verbose.out ./... 2>&1 | tee test-output-unit.log
+	@echo '$(GREEN)✓ Verbose unit tests completed$(RESET)'
+
+# ================================================================
+# Phase 2: Integration Tests
+# ================================================================
+
+test-integration: ## Run integration tests
+	@echo '$(BLUE)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(RESET)'
+	@echo '$(BLUE)  Phase 2: Integration Tests$(RESET)'
+	@echo '$(BLUE)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(RESET)'
+	@echo '$(YELLOW)Running integration tests...$(RESET)'
+	@# Start test server
+	@echo 'Starting test server...'
+	@PORT=8082 DB_PATH=./data/test.db ENV=test go run main.go &
+	@sleep 3
+	@# Run integration tests
+	@go test -v -tags=integration ./tests/integration/... || (pkill -f "go run main.go"; exit 1)
+	@# Stop test server
+	@pkill -f "go run main.go" || true
+	@echo '$(GREEN)✓ Integration tests completed$(RESET)'
+	@echo ''
+
+test-e2e: ## Run end-to-end tests
+	@echo '$(BLUE)Running end-to-end tests...$(RESET)'
+	@bash ./scripts/e2e-tests.sh
+	@echo '$(GREEN)✓ E2E tests completed$(RESET)'
+
+# ================================================================
+# Phase 3: Security Testing
+# ================================================================
+
+test-security: ## Run security scans
+	@echo '$(BLUE)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(RESET)'
+	@echo '$(BLUE)  Phase 3: Security Testing$(RESET)'
+	@echo '$(BLUE)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(RESET)'
+	@echo '$(YELLOW)1. Running gosec (Go Security Scanner)...$(RESET)'
+	@which gosec > /dev/null || (echo '$(RED)Installing gosec...$(RESET)' && go install github.com/securego/gosec/v2/cmd/gosec@latest)
+	gosec -fmt=json -out=coverage/security-gosec.json ./...
+	@echo '$(GREEN)✓ gosec scan completed$(RESET)'
+	@echo ''
+	@echo '$(YELLOW)2. Running go-audit (dependency vulnerabilities)...$(RESET)'
+	go list -json -m all | docker run --rm -i sonatypecommunity/nancy:latest sleuth || echo '$(YELLOW)Some vulnerabilities found$(RESET)'
+	@echo ''
+	@echo '$(YELLOW)3. Running staticcheck (static analysis)...$(RESET)'
+	@which staticcheck > /dev/null || (echo '$(RED)Installing staticcheck...$(RESET)' && go install honnef.co/go/tools/cmd/staticcheck@latest)
+	staticcheck ./...
+	@echo '$(GREEN)✓ Static analysis completed$(RESET)'
+	@echo ''
+	@echo '$(YELLOW)4. Checking for leaked secrets...$(RESET)'
+	@bash ./scripts/check-secrets.sh
+	@echo '$(GREEN)✓ Security scan completed$(RESET)'
+	@echo ''
+
+test-owasp: ## Run OWASP ZAP scan (requires Docker)
+	@echo '$(BLUE)Running OWASP ZAP security scan...$(RESET)'
+	@# Start application
+	@PORT=8083 go run main.go &
+	@sleep 5
+	@# Run ZAP scan
+	@docker run --rm --network="host" owasp/zap2docker-stable zap-baseline.py \
+		-t http://localhost:8083 \
+		-r coverage/owasp-zap-report.html || true
+	@# Stop application
+	@pkill -f "go run main.go" || true
+	@echo '$(GREEN)✓ OWASP ZAP scan completed$(RESET)'
+	@echo '$(YELLOW)Report: coverage/owasp-zap-report.html$(RESET)'
+
+# ================================================================
+# Phase 4: Performance Testing
+# ================================================================
+
+test-performance: ## Run performance benchmarks
+	@echo '$(BLUE)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(RESET)'
+	@echo '$(BLUE)  Phase 4: Performance Testing$(RESET)'
+	@echo '$(BLUE)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(RESET)'
+	@echo '$(YELLOW)1. Running Go benchmarks...$(RESET)'
+	go test -bench=. -benchmem -cpuprofile=coverage/cpu.prof -memprofile=coverage/mem.prof ./... | tee coverage/benchmark.txt
+	@echo '$(GREEN)✓ Benchmarks completed$(RESET)'
+	@echo ''
+	@echo '$(YELLOW)2. Running load tests...$(RESET)'
+	@bash ./scripts/load-test.sh
+	@echo '$(GREEN)✓ Load tests completed$(RESET)'
+	@echo ''
+
+test-lighthouse: ## Run Lighthouse audit (requires Chrome)
+	@echo '$(BLUE)Running Lighthouse performance audit...$(RESET)'
+	@# Start application
+	@PORT=8084 go run main.go &
+	@sleep 5
+	@# Run Lighthouse
+	@which lighthouse > /dev/null || npm install -g lighthouse
+	lighthouse http://localhost:8084 \
+		--output=html \
+		--output-path=coverage/lighthouse-report.html \
+		--chrome-flags="--headless" || true
+	@# Stop application
+	@pkill -f "go run main.go" || true
+	@echo '$(GREEN)✓ Lighthouse audit completed$(RESET)'
+	@echo '$(YELLOW)Report: coverage/lighthouse-report.html$(RESET)'
+
+# ================================================================
+# Phase 5: QA-GPT Automated Testing
+# ================================================================
+
+qa-gpt: ## Run QA-GPT automated validation
+	@echo '$(BLUE)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(RESET)'
+	@echo '$(BLUE)  Phase 5: QA-GPT Automated Testing$(RESET)'
+	@echo '$(BLUE)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(RESET)'
+	@echo '$(YELLOW)Building QA-GPT testing container...$(RESET)'
+	docker build -f Dockerfile.qa-gpt -t qa-gpt-tester .
+	@echo '$(YELLOW)Running automated QA tests...$(RESET)'
+	docker run --rm \
+		-v $(PWD)/coverage:/app/coverage \
+		-e TEST_MODE=comprehensive \
+		qa-gpt-tester
+	@echo '$(GREEN)✓ QA-GPT testing completed$(RESET)'
+	@echo '$(YELLOW)Results: coverage/qa-gpt-report.json$(RESET)'
+
+# ================================================================
+# Comprehensive Testing
+# ================================================================
+
+test-all: clean ## Run all tests (unit, integration, security, performance)
+	@echo '$(BLUE)╔════════════════════════════════════════════════════╗$(RESET)'
+	@echo '$(BLUE)║    COMPREHENSIVE TESTING SUITE - ALL PHASES       ║$(RESET)'
+	@echo '$(BLUE)╚════════════════════════════════════════════════════╝$(RESET)'
+	@echo ''
+	@$(MAKE) test-unit
+	@$(MAKE) test-integration
+	@$(MAKE) test-security
+	@$(MAKE) test-performance
+	@$(MAKE) test-smoke
+	@$(MAKE) generate-report
+	@echo ''
+	@echo '$(GREEN)╔════════════════════════════════════════════════════╗$(RESET)'
+	@echo '$(GREEN)║    ALL TESTS COMPLETED SUCCESSFULLY ✓              ║$(RESET)'
+	@echo '$(GREEN)╚════════════════════════════════════════════════════╝$(RESET)'
+	@echo ''
+	@echo '$(YELLOW)Reports available in: coverage/$(RESET)'
+	@echo '  - coverage/unit.html (Unit test coverage)'
+	@echo '  - coverage/security-gosec.json (Security scan)'
+	@echo '  - coverage/benchmark.txt (Performance benchmarks)'
+	@echo '  - coverage/test-report.html (Comprehensive report)'
+	@echo ''
+
+# ================================================================
+# Manual Smoke Tests
+# ================================================================
+
+test-smoke: ## Run manual smoke tests
+	@echo '$(BLUE)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(RESET)'
+	@echo '$(BLUE)  Smoke Testing$(RESET)'
+	@echo '$(BLUE)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(RESET)'
+	@bash ./scripts/smoke-tests.sh
+	@echo '$(GREEN)✓ Smoke tests completed$(RESET)'
+
+# ================================================================
+# CI/CD Integration
+# ================================================================
+
+ci-test: ## Run tests in CI environment
+	@echo '$(BLUE)Running CI test suite...$(RESET)'
+	@$(MAKE) test-unit
+	@$(MAKE) test-integration
+	@$(MAKE) test-security
+	@echo '$(GREEN)✓ CI tests completed$(RESET)'
+
+ci-build: ## Build for CI
+	@echo '$(BLUE)Building application...$(RESET)'
+	CGO_ENABLED=1 go build -ldflags="-w -s" -o ./bin/app .
+	@echo '$(GREEN)✓ Build completed$(RESET)'
+
+ci-deploy-check: ## Pre-deployment validation
+	@echo '$(BLUE)Running pre-deployment checks...$(RESET)'
+	@bash ./scripts/pre-deploy-check.sh
+	@echo '$(GREEN)✓ Deployment checks passed$(RESET)'
+
+# ================================================================
+# Reporting & Analysis
+# ================================================================
+
+generate-report: ## Generate comprehensive test report
+	@echo '$(BLUE)Generating comprehensive test report...$(RESET)'
+	@bash ./scripts/generate-test-report.sh
+	@echo '$(GREEN)✓ Report generated: coverage/test-report.html$(RESET)'
+
+view-coverage: ## Open coverage report in browser
+	@open coverage/unit.html || xdg-open coverage/unit.html || echo 'Please open coverage/unit.html manually'
+
+view-reports: ## Open all reports in browser
+	@echo '$(BLUE)Opening test reports...$(RESET)'
+	@open coverage/test-report.html || xdg-open coverage/test-report.html || echo 'Please open coverage/test-report.html manually'
+
+# ================================================================
+# Utilities
+# ================================================================
+
+clean: ## Clean test artifacts
+	@echo '$(YELLOW)Cleaning test artifacts...$(RESET)'
+	@mkdir -p coverage
+	@rm -f coverage/*.out coverage/*.prof coverage/*.txt coverage/*.json coverage/*.html
+	@rm -f test-output-*.log
+	@rm -f data/test.db
+	@pkill -f "go run main.go" || true
+	@echo '$(GREEN)✓ Cleaned$(RESET)'
+
+setup-test-env: ## Setup testing environment
+	@echo '$(BLUE)Setting up testing environment...$(RESET)'
+	@mkdir -p coverage data tests/integration
+	@go install github.com/securego/gosec/v2/cmd/gosec@latest
+	@go install honnef.co/go/tools/cmd/staticcheck@latest
+	@echo '$(GREEN)✓ Testing environment ready$(RESET)'
+
+install-tools: ## Install testing tools
+	@echo '$(BLUE)Installing testing tools...$(RESET)'
+	go install github.com/securego/gosec/v2/cmd/gosec@latest
+	go install honnef.co/go/tools/cmd/staticcheck@latest
+	go install golang.org/x/tools/cmd/cover@latest
+	@which docker > /dev/null || echo '$(RED)Docker not found. Please install Docker.$(RESET)'
+	@echo '$(GREEN)✓ Tools installed$(RESET)'
+
+# ================================================================
+# Documentation
+# ================================================================
+
+docs-tests: ## Generate testing documentation
+	@echo '$(BLUE)Generating testing documentation...$(RESET)'
+	@bash ./scripts/generate-test-docs.sh
+	@echo '$(GREEN)✓ Documentation generated$(RESET)'
+
+# ================================================================
+# Deployment Targets
+# ================================================================
+
+pre-deploy: ## Run pre-deployment validation
+	@echo '$(BLUE)Running pre-deployment checks...$(RESET)'
+	@bash scripts/pre-deploy-check.sh
+
+deploy: pre-deploy ## Deploy to Coolify (runs pre-checks first)
+	@echo '$(BLUE)Deploying to Coolify...$(RESET)'
+	@bash scripts/deploy-to-coolify.sh
+
+monitor: ## Monitor deployment health
+	@echo '$(BLUE)Starting deployment monitoring...$(RESET)'
+	@bash scripts/monitor-deployment.sh
+
+rollback: ## Rollback to previous deployment
+	@echo '$(RED)Starting rollback procedure...$(RESET)'
+	@bash scripts/rollback-deployment.sh
+
+# ================================================================
+# Default target
+# ================================================================
+
+.DEFAULT_GOAL := help

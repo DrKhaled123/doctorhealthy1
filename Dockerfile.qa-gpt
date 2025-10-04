@@ -1,0 +1,169 @@
+# ================================================================
+# QA-GPT Automated Testing Container
+# Dockerfile for rigorous automated validation
+# ================================================================
+
+FROM golang:1.22-alpine AS builder
+
+# Install dependencies
+RUN apk add --no-cache git gcc musl-dev sqlite-dev
+
+WORKDIR /app
+
+# Copy go mod files
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build application
+RUN CGO_ENABLED=1 go build -ldflags="-w -s" -o /app/bin/app .
+
+# ================================================================
+# Testing Stage
+# ================================================================
+
+FROM alpine:latest
+
+# Install testing tools
+RUN apk add --no-cache \
+    curl \
+    bash \
+    jq \
+    sqlite \
+    ca-certificates \
+    openssl
+
+WORKDIR /app
+
+# Copy binary from builder
+COPY --from=builder /app/bin/app /app/app
+COPY --from=builder /app/frontend /app/frontend
+
+# Copy test scripts
+COPY scripts/e2e-tests.sh /app/scripts/
+COPY scripts/smoke-tests.sh /app/scripts/
+COPY scripts/check-secrets.sh /app/scripts/
+
+# Make scripts executable
+RUN chmod +x /app/scripts/*.sh
+
+# Create test data directory
+RUN mkdir -p /app/data /app/coverage
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:8081/health || exit 1
+
+# Expose port
+EXPOSE 8081
+
+# Create comprehensive test script
+RUN cat > /app/run-qa-tests.sh <<'EOF'
+#!/bin/bash
+
+set -e
+
+echo "╔════════════════════════════════════════════════════╗"
+echo "║    QA-GPT AUTOMATED TESTING CONTAINER             ║"
+echo "╚════════════════════════════════════════════════════╝"
+echo ""
+
+# Start application in background
+echo "Starting application..."
+PORT=8081 DB_PATH=/app/data/test.db /app/app &
+APP_PID=$!
+
+# Wait for application to start
+echo "Waiting for application to start..."
+sleep 5
+
+# Check if application is running
+if ! curl -s http://localhost:8081/health > /dev/null; then
+    echo "✗ Application failed to start"
+    exit 1
+fi
+
+echo "✓ Application started successfully"
+echo ""
+
+# Run test suites
+TEST_RESULTS=()
+FAILED_TESTS=0
+
+run_test_suite() {
+    local suite_name=$1
+    local script_path=$2
+    
+    echo "════════════════════════════════════════════════════"
+    echo "  Running: $suite_name"
+    echo "════════════════════════════════════════════════════"
+    echo ""
+    
+    if bash $script_path; then
+        echo "✓ $suite_name passed"
+        TEST_RESULTS+=("PASS: $suite_name")
+    else
+        echo "✗ $suite_name failed"
+        TEST_RESULTS+=("FAIL: $suite_name")
+        ((FAILED_TESTS++))
+    fi
+    echo ""
+}
+
+# Execute test suites
+run_test_suite "End-to-End Tests" "/app/scripts/e2e-tests.sh"
+run_test_suite "Smoke Tests" "/app/scripts/smoke-tests.sh"
+run_test_suite "Security Checks" "/app/scripts/check-secrets.sh"
+
+# Generate JSON report
+cat > /app/coverage/qa-gpt-report.json <<JSONEOF
+{
+  "timestamp": "$(date -Iseconds)",
+  "test_mode": "${TEST_MODE:-comprehensive}",
+  "application": "DoctorHealthy1 API",
+  "results": {
+    "total_suites": ${#TEST_RESULTS[@]},
+    "failed_suites": $FAILED_TESTS,
+    "passed_suites": $((${#TEST_RESULTS[@]} - $FAILED_TESTS)),
+    "suites": [
+      $(for result in "${TEST_RESULTS[@]}"; do
+          status="${result%%:*}"
+          name="${result#*: }"
+          echo "      {\"name\": \"$name\", \"status\": \"$status\"},"
+        done | sed '$ s/,$//')
+    ]
+  },
+  "status": "$([ $FAILED_TESTS -eq 0 ] && echo 'PASSED' || echo 'FAILED')"
+}
+JSONEOF
+
+# Stop application
+kill $APP_PID || true
+
+# Print summary
+echo "════════════════════════════════════════════════════"
+echo "  QA-GPT Test Summary"
+echo "════════════════════════════════════════════════════"
+echo ""
+cat /app/coverage/qa-gpt-report.json | jq '.'
+echo ""
+
+if [ $FAILED_TESTS -eq 0 ]; then
+    echo "╔════════════════════════════════════════════════════╗"
+    echo "║    ✓ ALL QA-GPT TESTS PASSED                      ║"
+    echo "╚════════════════════════════════════════════════════╝"
+    exit 0
+else
+    echo "╔════════════════════════════════════════════════════╗"
+    echo "║    ✗ $FAILED_TESTS TEST SUITE(S) FAILED                       ║"
+    echo "╚════════════════════════════════════════════════════╝"
+    exit 1
+fi
+EOF
+
+RUN chmod +x /app/run-qa-tests.sh
+
+# Default command
+CMD ["/app/run-qa-tests.sh"]

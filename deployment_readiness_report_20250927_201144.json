@@ -1,0 +1,122 @@
+{
+  "session_id": "20250927_201144",
+  "errors": [],
+  "prevention_checks": {
+    "reverse_proxy": {
+      "nginx_config": {
+        "success": true,
+        "message": "Nginx not installed (using alternative proxy)",
+        "recommendation": "Consider nginx for production reverse proxy"
+      },
+      "port_conflicts": {
+        "success": false,
+        "message": "Found 2 port conflicts",
+        "details": [
+          {
+            "port": 443,
+            "process": "Telegram    610 khaledahmedmohamed   17u  IPv4 0x73f3def44abd15b5      0t0  TCP 192.168.1.2:62721->149.154.167.92:https (ESTABLISHED)"
+          },
+          {
+            "port": 8085,
+            "process": "api-key-g 78642 khaledahmedmohamed    8u  IPv6 0x73f3deef88e2dca5      0t0  TCP *:8085 (LISTEN)"
+          }
+        ],
+        "recommendation": "Resolve port conflicts before deployment"
+      },
+      "proxy_headers": {
+        "success": false,
+        "message": "Found 0/4 proxy headers",
+        "details": [],
+        "recommendation": "Add missing proxy headers for production"
+      }
+    },
+    "file_deployment": {
+      "file_permissions": {
+        "success": true,
+        "message": "File permissions are correct",
+        "details": "Read/write/execute permissions validated"
+      },
+      "disk_space": {
+        "success": true,
+        "message": "Disk 79% full, 42Gi available",
+        "details": "Sufficient disk space available"
+      },
+      "dependencies": {
+        "success": true,
+        "message": "All required dependencies present",
+        "details": [
+          "go",
+          "docker",
+          "curl",
+          "git"
+        ]
+      }
+    },
+    "docker": {
+      "dockerfile_syntax": {
+        "success": true,
+        "message": "Dockerfile follows 5/5 best practices",
+        "details": {
+          "multi_stage": true,
+          "non_root_user": true,
+          "explicit_version": true,
+          "workdir_set": true,
+          "expose_port": true
+        },
+        "recommendation": "Improve Dockerfile security and practices"
+      },
+      "docker_service": {
+        "success": true,
+        "message": "Docker service is running",
+        "details": "Docker daemon accessible"
+      },
+      "image_security": {
+        "success": true,
+        "message": "Docker build appears secure",
+        "details": "No obvious security issues in build"
+      }
+    },
+    "security": {
+      "xss_protection": {
+        "success": true,
+        "message": "Blocked 3/3 XSS attempts",
+        "details": "Protection rate: 100.0%",
+        "recommendation": "Improve XSS protection if rate < 100%"
+      },
+      "sql_injection": {
+        "success": true,
+        "message": "Blocked 3/3 SQL injection attempts",
+        "details": "Protection rate: 100.0%"
+      },
+      "auth_validation": {
+        "success": false,
+        "message": "Authentication bypass detected (status: 429)",
+        "recommendation": "Strengthen authentication validation"
+      },
+      "rate_limiting": {
+        "success": true,
+        "message": "Rate limiting is active",
+        "recommendation": null
+      }
+    },
+    "platform": {
+      "coolify_readiness": {
+        "success": true,
+        "message": "Coolify deployment ready",
+        "details": "All required files and SSH key present"
+      },
+      "environment_variables": {
+        "success": false,
+        "message": "Missing required env vars: PORT, DB_PATH",
+        "recommendation": "Set required environment variables"
+      },
+      "ssl_certificates": {
+        "success": true,
+        "message": "SSL configuration not required for initial deployment",
+        "recommendation": "Configure SSL certificates after successful deployment"
+      }
+    }
+  },
+  "recommendations": [],
+  "deployment_ready": true
+}

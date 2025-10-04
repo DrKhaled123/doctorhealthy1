@@ -1,0 +1,19 @@
+pyautogen>=0.2.0
+redis>=5.0.0
+rq>=1.15.0
+python-dotenv>=1.0.0
+pydantic>=2.0.0
+loguru>=0.7.0
+typing-extensions>=4.5.0
+
+# Factory Orchestrator Dependencies
+playwright>=1.40.0
+selenium>=4.15.0
+sentence-transformers>=2.2.0
+faiss-cpu>=1.7.0
+autopep8>=2.0.0
+black>=23.0.0
+requests>=2.31.0
+numpy>=1.24.0
+ujson>=5.8.0
+lightagent==0.1.1

@@ -9,4 +9,3 @@ func GetEnvOrDefault(key, def string) string {
 	}
 	return def
 }
-

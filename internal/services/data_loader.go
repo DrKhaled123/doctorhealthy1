@@ -224,25 +224,25 @@ func (dl *DataLoader) LoadRecipes() (RecipeData, error) {
 	return result, err
 }
 
-// LoadVitaminsAndMinerals loads supplement data from comprehensive JSON file
+// LoadVitaminsAndMinerals loads supplement data from VIP drugs-nutrition file
 func (dl *DataLoader) LoadVitaminsAndMinerals() ([]VitaminMineral, error) {
-	filePath := filepath.Join(dl.dataPath, "vitamins-minerals-comprehensive.js")
+	filePath := filepath.Join(dl.dataPath, "vip-drugs-nutrition.js")
 	var result []VitaminMineral
 	err := dl.loadJSONFile(filePath, &result)
 	return result, err
 }
 
-// LoadWorkouts loads workout data from JSON file
+// LoadWorkouts loads workout data from VIP workouts file
 func (dl *DataLoader) LoadWorkouts() (WorkoutData, error) {
-	filePath := filepath.Join(dl.dataPath, "workouts.js")
+	filePath := filepath.Join(dl.dataPath, "vip-workouts.js")
 	var result WorkoutData
 	err := dl.loadJSONFile(filePath, &result)
 	return result, err
 }
 
-// LoadInjuries loads injury data from JSON file
+// LoadInjuries loads injury data from VIP injuries file
 func (dl *DataLoader) LoadInjuries() ([]Injury, error) {
-	filePath := filepath.Join(dl.dataPath, "injuries.js")
+	filePath := filepath.Join(dl.dataPath, "vip-injuries.js")
 	var result []Injury
 	err := dl.loadJSONFile(filePath, &result)
 	return result, err

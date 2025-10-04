@@ -35,4 +35,3 @@ func GenerateSimplePDF(titleEn, titleAr string, sections []string) ([]byte, erro
 	}
 	return buf.Bytes(), nil
 }
-

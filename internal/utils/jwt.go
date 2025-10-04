@@ -40,4 +40,3 @@ func ParseJWT(tokenStr string) (string, error) {
 	}
 	return "", jwt.ErrSignatureInvalid
 }
-

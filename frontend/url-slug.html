@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <>DoctorHealthy1 - Enterprise Trial URL Generator</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            border-left: 4px solid #3498db;
+        }
+        .url-result {
+            word-break: break-all;
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+        }
+        .hidden {
+            display: none;
+        }
+        .tab-container {
+            margin-bottom: 20px;
+        }
+        .tab-buttons {
+            display: flex;
+        }
+        .tab-button {
+            flex: 1;
+            padding: 10px;
+            background-color: #f1f1f1;
+            border: none;
+            cursor: pointer;
+        }
+        .tab-button.active {
+            background-color: #3498db;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-top: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>DoctorHealthy1 Enterprise Trial URL Generator</h1>
+
+        <div class="tab-container">
+            <div class="tab-buttons">
+                <button class="tab-button active" onclick="openTab(event, 'enterprise-tab')">Enterprise Trial</button>
+                <button class="tab-button" onclick="openTab(event, 'custom-tab')">Custom Trial</button>
+            </div>
+
+            <div id="enterprise-tab" class="tab-content active">
+                <form id="enterprise-form">
+                    <div class="form-group">
+                        <label for="domain">Domain:</label>
+                        <input type="text" id="domain" name="domain" value="doctorhealthy1.com" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="company">Company Name:</label>
+                        <input type="text" id="company" name="company" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="plan-type">Plan Type (optional):</label>
+                        <input type="text" id="plan-type" name="plan-type" placeholder="e.g., premium, basic">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="api-key">API Key (optional):</label>
+                        <input type="text" id="api-key" name="api-key" placeholder="Enter your API key for higher rate limits">
+                    </div>
+
+                    <button type="submit">Generate URL</button>
+                </form>
+
+                <div id="enterprise-result" class="result hidden">
+                    <h3>Generated URL:</h3>
+                    <div id="enterprise-url" class="url-result"></div>
+                    <div id="enterprise-slug" class="url-result"></div>
+                </div>
+            </div>
+
+            <div id="custom-tab" class="tab-content">
+                <form id="custom-form">
+                    <div class="form-group">
+                        <label for="custom-domain">Domain:</label>
+                        <input type="text" id="custom-domain" name="custom-domain" value="doctorhealthy1.com" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="custom-params">Parameters (JSON format):</label>
+                        <textarea id="custom-params" name="custom-params" rows="5" placeholder='{"company": "Your Company", "plan": "premium", "duration": "30"}' required></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="custom-api-key">API Key (optional):</label>
+                        <input type="text" id="custom-api-key" name="custom-api-key" placeholder="Enter your API key for higher rate limits">
+                    </div>
+
+                    <button type="submit">Generate URL</button>
+                </form>
+
+                <div id="custom-result" class="result hidden">
+                    <h3>Generated URL:</h3>
+                    <div id="custom-url" class="url-result"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openTab(evt, tabName) {
+            var i, tabcontent, tabbuttons;
+
+            // Hide all tab contents
+            tabcontent = document.getElementsByClassName("tab-content");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].classList.remove("active");
+            }
+
+            // Remove active class from all tab buttons
+            tabbuttons = document.getElementsByClassName("tab-button");
+            for (i = 0; i < tabbuttons.length; i++) {
+                tabbuttons[i].classList.remove("active");
+            }
+
+            // Show the specific tab content
+            document.getElementById(tabName).classList.add("active");
+
+            // Add active class to the button that opened the tab
+            evt.currentTarget.classList.add("active");
+        }
+
+        document.getElementById("enterprise-form").addEventListener("submit", function(e) {
+            e.preventDefault();
+
+            const formData = {
+                domain: document.getElementById("domain").value,
+                company: document.getElementById("company").value,
+                plan_type: document.getElementById("plan-type").value,
+                api_key: document.getElementById("api-key").value
+            };
+
+            fetch("/api/v1/url-slug/enterprise-trial", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("enterprise-result").classList.remove("hidden");
+                document.getElementById("enterprise-url").textContent = data.url;
+                document.getElementById("enterprise-slug").textContent = "Slug: " + data.slug;
+            })
+            .catch(error => {
+                console.error("Error:", error);
+                alert("Error generating URL. Please check your input and try again.");
+            });
+        });
+
+        document.getElementById("custom-form").addEventListener("submit", function(e) {
+            e.preventDefault();
+
+            const params = JSON.parse(document.getElementById("custom-params").value);
+
+            const formData = {
+                domain: document.getElementById("custom-domain").value,
+                params: params,
+                api_key: document.getElementById("custom-api-key").value
+            };
+
+            fetch("/api/v1/url-slug/custom-trial", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("custom-result").classList.remove("hidden");
+                document.getElementById("custom-url").textContent = data.url;
+            })
+            .catch(error => {
+                console.error("Error:", error);
+                alert("Error generating URL. Please check your input and try again.");
+            });
+        });
+    </script>
+</body>
+</html>

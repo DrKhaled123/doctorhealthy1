@@ -341,7 +341,8 @@ type BilingualRecommendation struct {
 
 // LoadComprehensiveHealthDatabase loads the complete health database
 func (cdl *ComprehensiveDataLoader) LoadComprehensiveHealthDatabase() (*ComprehensiveHealthDatabase, error) {
-	filePath := filepath.Join(cdl.dataPath, "comprehensive-health-database-COMPLETE.js")
+	// Try different file paths for VIP health database
+	filePath := filepath.Join(cdl.dataPath, "vip-workouts.js")
 	var result ComprehensiveHealthDatabase
 	err := cdl.loadJSONFile(filePath, &result)
 	return &result, err

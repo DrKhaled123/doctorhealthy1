@@ -38,13 +38,19 @@ func main() {
 	}
 
 	// Load configuration
-	cfg := config.Load()
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("Configuration error: %v", err)
+	}
 
-	// Debug: Log configuration values
-	log.Printf("DEBUG: Server Port: %s", cfg.Server.Port)
-	log.Printf("DEBUG: Database Path: %s", cfg.Database.Path)
-	log.Printf("DEBUG: JWT Secret present: %t", os.Getenv("JWT_SECRET") != "")
-	log.Printf("DEBUG: CORS Origins: %s", os.Getenv("CORS_ORIGINS"))
+	// Debug: Log configuration values (only in debug/development mode)
+	if cfg.Logging.EnableDebug {
+		log.Printf("[DEBUG] Server Port: %s", cfg.Server.Port)
+		log.Printf("[DEBUG] Database Path: %s", cfg.Database.Path)
+		log.Printf("[DEBUG] JWT Secret present: %t", os.Getenv("JWT_SECRET") != "")
+		log.Printf("[DEBUG] CORS Origins: %s", os.Getenv("CORS_ORIGINS"))
+		log.Printf("[DEBUG] Log Level: %s", cfg.Logging.Level)
+	}
 
 	// Initialize database
 	db, err := database.Initialize(cfg.Database.Path)
@@ -59,12 +65,17 @@ func main() {
 	}()
 
 	// Initialize services
-	apiKeyService := services.NewAPIKeyService(db, cfg)
+	apiKeyService, err := services.NewAPIKeyService(db, cfg)
+	if err != nil {
+		log.Fatalf("Failed to initialize API key service: %v", err)
+	}
+	defer func() {
+		if err := apiKeyService.Close(); err != nil {
+			log.Printf("Error closing API key service: %v", err)
+		}
+	}()
+
 	userService := services.NewUserService(db)
-	dataLoader := services.NewDataLoader(".")
-	nutritionService := services.NewNutritionService(db, userService)
-	workoutService := services.NewWorkoutService(db, userService)
-	healthService := services.NewHealthService(db, userService, dataLoader)
 	recipeService := services.NewRecipeService(db)
 	vipService := services.NewVIPIntegrationService(".")
 	ultimateService := services.NewUltimateDataService()
@@ -81,7 +92,43 @@ func main() {
 	// Middleware
 	e.Use(echomiddleware.Logger())
 	e.Use(echomiddleware.Recover())
-	e.Use(echomiddleware.CORS())
+
+	// Production-ready CORS configuration
+	e.Use(echomiddleware.CORSWithConfig(echomiddleware.CORSConfig{
+		AllowOrigins: []string{
+			"https://my.doctorhealthy1.com",
+			"https://doctorhealthy1.com",
+			"https://www.doctorhealthy1.com",
+			"http://localhost:3000", // Local development
+			"http://localhost:8080", // Local testing
+		},
+		AllowMethods: []string{
+			http.MethodGet,
+			http.MethodPost,
+			http.MethodPut,
+			http.MethodPatch,
+			http.MethodDelete,
+			http.MethodOptions,
+			http.MethodHead,
+		},
+		AllowHeaders: []string{
+			echo.HeaderOrigin,
+			echo.HeaderContentType,
+			echo.HeaderAccept,
+			echo.HeaderAuthorization,
+			"X-API-Key",
+			"X-Requested-With",
+			"X-CSRF-Token",
+		},
+		AllowCredentials: true,
+		ExposeHeaders: []string{
+			echo.HeaderContentLength,
+			echo.HeaderContentType,
+			"X-Request-ID",
+		},
+		MaxAge: 300, // 5 minutes
+	}))
+
 	e.Use(middleware.Security())
 	e.Use(middleware.RateLimit(cfg))
 	// Optional JWT (sets user_id when Authorization: Bearer is present)
@@ -93,14 +140,7 @@ func main() {
 	middleware.SetupErrorHandler(e)
 
 	// Health check
-	e.GET("/health", func(c echo.Context) error {
-		return c.JSON(http.StatusOK, map[string]interface{}{
-			"status":    "healthy",
-			"timestamp": time.Now().UTC(),
-			"version":   getVersion(),
-			"features":  []string{"api_keys", "nutrition", "workouts", "health", "recipes", "vip_data_integration", "ultimate_comprehensive_database", "sets_reps_management", "warmup_technique_system", "comprehensive_workout_system", "enhanced_health_system"},
-		})
-	})
+	e.GET("/health", handlers.HealthCheckHandler(db))
 
 	// Readiness check
 	e.GET("/ready", func(c echo.Context) error {
@@ -118,8 +158,7 @@ func main() {
 	// API Key management routes
 	handlers.RegisterAPIKeyRoutes(api, apiKeyService)
 
-	// Health management routes
-	handlers.RegisterHealthRoutes(api, userService, nutritionService, workoutService, healthService, recipeService)
+	// Health management routes (handlers already registered in individual route files)
 
 	// Recipe API routes with security integration
 	handlers.SetupRecipeRoutes(e, recipeService, apiKeyService)
@@ -152,34 +191,78 @@ func main() {
 	// PDF generation routes with quota management
 	handlers.SetupPDFRoutes(e)
 
+	// URL slug generation routes
+	handlers.RegisterURLSlugRoutes(api, apiKeyService)
+
 	// Static frontend serving with dual-source fallback (disk first, then embedded)
 	// Serve root index
 	e.GET("/", func(c echo.Context) error {
 		return serveStaticFile(c, "index.html", embeddedFrontend)
 	})
 
-	// Serve assets under /frontend/*
-	e.GET("/frontend/*", func(c echo.Context) error {
-		path := strings.TrimPrefix(c.Request().URL.Path, "/frontend/")
-		if path == "" || strings.HasSuffix(c.Request().URL.Path, "/") {
-			path += "index.html"
-		}
-		return serveStaticFile(c, path, embeddedFrontend)
+	// Serve frontend pages
+	e.GET("/diet.html", func(c echo.Context) error {
+		return serveStaticFile(c, "diet.html", embeddedFrontend)
 	})
 
-	// Catch-all fallback to index for SPA-like navigation
+	e.GET("/workouts.html", func(c echo.Context) error {
+		return serveStaticFile(c, "workouts.html", embeddedFrontend)
+	})
+
+	e.GET("/recipes.html", func(c echo.Context) error {
+		return serveStaticFile(c, "recipes.html", embeddedFrontend)
+	})
+
+	e.GET("/lifestyle.html", func(c echo.Context) error {
+		return serveStaticFile(c, "lifestyle.html", embeddedFrontend)
+	})
+
+	e.GET("/pricing.html", func(c echo.Context) error {
+		return serveStaticFile(c, "pricing.html", embeddedFrontend)
+	})
+
+	e.GET("/home.html", func(c echo.Context) error {
+		return serveStaticFile(c, "home.html", embeddedFrontend)
+	})
+
+	// Serve URL slug generator page
+	e.GET("/url-slug", func(c echo.Context) error {
+		return serveStaticFile(c, "url-slug.html", embeddedFrontend)
+	})
+
+	// Serve CSS and JS assets
+	e.GET("/frontend/css/*", func(c echo.Context) error {
+		path := strings.TrimPrefix(c.Request().URL.Path, "/frontend/css/")
+		return serveStaticFile(c, "css/"+path, embeddedFrontend)
+	})
+
+	e.GET("/frontend/js/*", func(c echo.Context) error {
+		path := strings.TrimPrefix(c.Request().URL.Path, "/frontend/js/")
+		return serveStaticFile(c, "js/"+path, embeddedFrontend)
+	})
+
+	// Catch-all fallback to index for SPA-like navigation (only for non-API routes)
 	e.GET("/*", func(c echo.Context) error {
+		path := c.Request().URL.Path
+		// Don't serve index.html for API routes
+		if strings.HasPrefix(path, "/api/") {
+			return echo.NewHTTPError(http.StatusNotFound, "endpoint not found")
+		}
 		return serveStaticFile(c, "index.html", embeddedFrontend)
 	})
 
 	// Check if port is available
-	log.Printf("DEBUG: Attempting to start server on port %s", cfg.Server.Port)
+	if cfg.Logging.EnableDebug {
+		log.Printf("[DEBUG] Attempting to start server on port %s", cfg.Server.Port)
+	}
 
 	// Start server
 	errorChan := make(chan error, 1)
 	go func() {
 		if err := e.Start(":" + cfg.Server.Port); err != nil && err != http.ErrServerClosed {
-			log.Printf("DEBUG: Server start error: %v", err)
+			if cfg.Logging.EnableDebug {
+				log.Printf("[DEBUG] Server start error: %v", err)
+			}
 			errorChan <- err
 		}
 	}()

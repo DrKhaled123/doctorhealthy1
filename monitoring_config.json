@@ -1,0 +1,23 @@
+{
+  "monitoring_interval": 30,
+  "retention_days": 7,
+  "thresholds": {
+    "response_time_ms": 2000,
+    "cpu_usage_percent": 80,
+    "memory_usage_percent": 85,
+    "disk_usage_percent": 90,
+    "error_rate_percent": 5,
+    "request_rate_per_minute": 1000,
+    "concurrent_connections": 100
+  },
+  "endpoints_to_monitor": [
+    "http://localhost:8085/health",
+    "http://localhost:8085/ready",
+    "http://localhost:8085/metrics"
+  ],
+  "alert_rules": {
+    "consecutive_failures": 3,
+    "response_time_samples": 5,
+    "escalation_minutes": 15
+  }
+}

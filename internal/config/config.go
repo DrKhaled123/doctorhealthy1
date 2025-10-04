@@ -1,67 +1,107 @@
 package config
 
 import (
-	"log"
+	"fmt"
 	"os"
 	"strconv"
 	"time"
 )
 
-// Config holds all configuration for the application
 type Config struct {
-	Server   ServerConfig
-	Database DatabaseConfig
-	APIKey   APIKeyConfig
-	Security SecurityConfig
+	Server    ServerConfig
+	Database  DatabaseConfig
+	JWT       JWTConfig
+	CORS      CORSConfig
+	RateLimit RateLimitConfig
+	APIKey    APIKeyConfig
+	Security  SecurityConfig
+	Logging   LoggingConfig
 }
 
-// ServerConfig holds server configuration
 type ServerConfig struct {
 	Port string
-	Env  string
+	Host string
 }
 
-// DatabaseConfig holds database configuration
 type DatabaseConfig struct {
 	Path string
 }
 
-// APIKeyConfig holds API key configuration
-type APIKeyConfig struct {
-	Length         int
-	ExpiryDuration time.Duration
-	Prefix         string
+type JWTConfig struct {
+	Secret string
 }
 
-// SecurityConfig holds security configuration
+type CORSConfig struct {
+	AllowedOrigins []string
+}
+
+type RateLimitConfig struct {
+	RequestsPerMinute int
+}
+
+type APIKeyConfig struct {
+	Prefix         string
+	Length         int
+	ExpiryDuration time.Duration
+}
+
 type SecurityConfig struct {
 	RateLimitRequests int
 	RateLimitWindow   time.Duration
 }
 
-// Load loads configuration from environment variables
-func Load() *Config {
-	return &Config{
-		Server: ServerConfig{
-			Port: getEnv("PORT", "8080"),
-			Env:  getEnv("ENV", "development"),
-		},
-		Database: DatabaseConfig{
-			Path: getEnv("DB_PATH", "data/apikeys.db"),
-		},
-		APIKey: APIKeyConfig{
-			Length:         getEnvAsInt("API_KEY_LENGTH", 32),
-			ExpiryDuration: getEnvAsDuration("API_KEY_EXPIRY", "365d"),
-			Prefix:         getEnv("API_KEY_PREFIX", "ak_"),
-		},
-		Security: SecurityConfig{
-			RateLimitRequests: getEnvAsInt("RATE_LIMIT_REQUESTS", 100),
-			RateLimitWindow:   getEnvAsDuration("RATE_LIMIT_WINDOW", "1m"),
-		},
-	}
+type LoggingConfig struct {
+	Level       string // debug, info, warn, error
+	EnableDebug bool
 }
 
-// Helper functions
+func Load() (*Config, error) {
+	cfg := &Config{
+		Server: ServerConfig{
+			Port: getEnv("PORT", "8080"),
+			Host: getEnv("HOST", "0.0.0.0"),
+		},
+		Database: DatabaseConfig{
+			Path: getEnv("DB_PATH", "./data/app.db"),
+		},
+		JWT: JWTConfig{
+			Secret: getEnv("JWT_SECRET", ""),
+		},
+		CORS: CORSConfig{
+			AllowedOrigins: []string{
+				getEnv("ALLOWED_ORIGIN", "https://api.doctorhealthy1.com"),
+			},
+		},
+		RateLimit: RateLimitConfig{
+			RequestsPerMinute: getEnvInt("RATE_LIMIT", 100),
+		},
+		APIKey: APIKeyConfig{
+			Prefix:         getEnv("API_KEY_PREFIX", "dh_"),
+			Length:         getEnvInt("API_KEY_LENGTH", 32),
+			ExpiryDuration: getEnvDuration("API_KEY_EXPIRY", 365*24*time.Hour), // Default 1 year
+		},
+		Security: SecurityConfig{
+			RateLimitRequests: getEnvInt("SECURITY_RATE_LIMIT_REQUESTS", 100),
+			RateLimitWindow:   getEnvDuration("SECURITY_RATE_LIMIT_WINDOW", time.Minute),
+		},
+		Logging: LoggingConfig{
+			Level:       getEnv("LOG_LEVEL", "info"),
+			EnableDebug: getEnv("ENV", "production") == "development",
+		},
+	}
+
+	// Validate required fields
+	if cfg.JWT.Secret == "" {
+		return nil, fmt.Errorf("JWT_SECRET environment variable is required")
+	}
+
+	if len(cfg.JWT.Secret) < 32 {
+		return nil, fmt.Errorf("JWT_SECRET must be at least 32 characters, got %d", len(cfg.JWT.Secret))
+	}
+
+	return cfg, nil
+}
+
 func getEnv(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
@@ -69,48 +109,20 @@ func getEnv(key, defaultValue string) string {
 	return defaultValue
 }
 
-func getEnvAsInt(key string, defaultValue int) int {
+func getEnvInt(key string, defaultValue int) int {
 	if value := os.Getenv(key); value != "" {
-		if intValue, err := strconv.Atoi(value); err == nil {
-			return intValue
-		} else {
-			log.Printf("Warning: failed to parse %s=%s as int, using default %d: %v", key, value, defaultValue, err)
+		if intVal, err := strconv.Atoi(value); err == nil {
+			return intVal
 		}
 	}
 	return defaultValue
 }
 
-func getEnvAsDuration(key string, defaultValue string) time.Duration {
+func getEnvDuration(key string, defaultValue time.Duration) time.Duration {
 	if value := os.Getenv(key); value != "" {
-		if duration, err := parseDuration(value); err == nil {
+		if duration, err := time.ParseDuration(value); err == nil {
 			return duration
-		} else {
-			log.Printf("Warning: failed to parse %s=%s as duration, using default %s: %v", key, value, defaultValue, err)
 		}
 	}
-	duration, _ := parseDuration(defaultValue)
-	return duration
-}
-
-// parseDuration parses duration strings like "365d", "24h", "30m"
-func parseDuration(s string) (time.Duration, error) {
-	if len(s) < 2 {
-		return time.ParseDuration(s)
-	}
-
-	unit := s[len(s)-1:]
-	value := s[:len(s)-1]
-
-	switch unit {
-	case "d":
-		if days, err := strconv.Atoi(value); err == nil {
-			return time.Duration(days) * 24 * time.Hour, nil
-		}
-	case "w":
-		if weeks, err := strconv.Atoi(value); err == nil {
-			return time.Duration(weeks) * 7 * 24 * time.Hour, nil
-		}
-	}
-
-	return time.ParseDuration(s)
+	return defaultValue
 }

@@ -43,4 +43,3 @@ func RequireJWT() echo.MiddlewareFunc {
 		}
 	}
 }
-

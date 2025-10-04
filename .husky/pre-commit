@@ -1,0 +1,44 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Run linting
+echo "🔍 Running ESLint..."
+npm run lint
+if [ $? -ne 0 ]; then
+    echo "❌ ESLint failed. Please fix the issues above."
+    exit 1
+fi
+
+# Run type checking
+echo "🔍 Running TypeScript type checking..."
+npx tsc --noEmit
+if [ $? -ne 0 ]; then
+    echo "❌ TypeScript type checking failed. Please fix the issues above."
+    exit 1
+fi
+
+# Run tests
+echo "🧪 Running tests..."
+npm run test
+if [ $? -ne 0 ]; then
+    echo "❌ Tests failed. Please fix the issues above."
+    exit 1
+fi
+
+# Run security scan
+echo "🔒 Running security scan..."
+npm run security-scan
+if [ $? -ne 0 ]; then
+    echo "⚠️ Security issues found. Please review the issues above."
+    # Don't fail the commit for security warnings, just warn
+fi
+
+# Run property-based tests
+echo "🧪 Running property-based tests..."
+npm run test:property
+if [ $? -ne 0 ]; then
+    echo "❌ Property-based tests failed. Please fix the issues above."
+    exit 1
+fi
+
+echo "✅ All pre-commit checks passed!"
