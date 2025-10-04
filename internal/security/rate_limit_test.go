@@ -237,8 +237,18 @@ func TestMonthlyQuotaMiddleware(t *testing.T) {
 			quotaExceededCount := 0
 			testLimit := minInt(tt.expectedLimit+2, 10) // Test a reasonable number
 
+			// Use consistent anon_id across all requests to properly test quota
+			anonID := "test-anon-" + tt.name
+
 			for i := 0; i < testLimit; i++ {
 				req := httptest.NewRequest(tt.method, tt.endpoint, nil)
+
+				// Set anon_id cookie to maintain identity across requests
+				anonCookie := &http.Cookie{
+					Name:  "anon_id",
+					Value: anonID,
+				}
+				req.AddCookie(anonCookie)
 
 				// Set plan cookie
 				if tt.plan != "" {
@@ -315,8 +325,18 @@ func TestQuotaWithSharedBonus(t *testing.T) {
 			// Test up to the limit + 2 to ensure quota is enforced
 			testRequests := tt.expectedLimit + 2
 
+			// Use consistent anon_id across all requests to properly test quota
+			anonID := "test-anon-" + tt.name
+
 			for i := 0; i < testRequests; i++ {
 				req := httptest.NewRequest(http.MethodPost, "/api/v1/enhanced/diet/generate", nil)
+
+				// Set anon_id cookie to maintain identity across requests
+				anonCookie := &http.Cookie{
+					Name:  "anon_id",
+					Value: anonID,
+				}
+				req.AddCookie(anonCookie)
 
 				// Set plan to free
 				planCookie := &http.Cookie{

@@ -602,6 +602,17 @@ func SanitizeInput(input string) string {
 	scriptTagRegex := regexp.MustCompile(`(?i)<script[^>]*>.*?</script>`)
 	input = scriptTagRegex.ReplaceAllString(input, "")
 
+	// Remove NoSQL injection operators
+	nosqlOperators := []string{
+		"$gt", "$gte", "$lt", "$lte", "$ne", "$eq",
+		"$or", "$and", "$not", "$nor",
+		"$exists", "$type", "$mod", "$regex", "$text", "$where",
+		"$expr", "$jsonSchema", "$all", "$elemMatch", "$size",
+	}
+	for _, op := range nosqlOperators {
+		input = strings.ReplaceAll(input, op, "")
+	}
+
 	// Remove potentially dangerous characters for SQL/NoSQL injection
 	dangerous := []string{"vbscript:", "eval(", "document.cookie", "window.location", "innerHTML", "outerHTML"}
 	for _, danger := range dangerous {
